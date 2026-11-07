@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from cryptography import x509
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 from app.scanner.modules.tls_validation import TlsValidationModule
@@ -26,14 +26,21 @@ def generate_test_cert(common_name: str, sans: list[str], days_valid: int = 30, 
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Test CA Ltd"),
     ])
 
+    if days_valid < 0:
+        not_before = now - timedelta(days=abs(days_valid) + 10)
+        not_after = now + timedelta(days=days_valid)
+    else:
+        not_before = now - timedelta(days=1)
+        not_after = now + timedelta(days=days_valid)
+
     builder = (
         x509.CertificateBuilder()
         .subject_name(subject)
         .issuer_name(issuer)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(now - timedelta(days=1))
-        .not_valid_after(now + timedelta(days=days_valid))
+        .not_valid_before(not_before)
+        .not_valid_after(not_after)
     )
 
     if sans:
@@ -43,7 +50,7 @@ def generate_test_cert(common_name: str, sans: list[str], days_valid: int = 30, 
         )
 
     cert = builder.sign(key, hashes.SHA256())
-    return cert.public_bytes(x509.Encoding.DER)
+    return cert.public_bytes(serialization.Encoding.DER)
 
 
 def test_hostname_matching():

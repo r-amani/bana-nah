@@ -294,6 +294,7 @@ class UrlDetectionModule(ModuleInterface):
         # Extract the primary label (e.g. 'paypal-update' from 'paypal-update.com')
         parts = hostname.split(".")
         main_label = parts[0] if len(parts) <= 2 else parts[-2]
+        tokens = list(set([main_label] + main_label.split("-")))
 
         matched_brand = None
         min_dist = 999
@@ -303,13 +304,14 @@ class UrlDetectionModule(ModuleInterface):
             if hostname == f"{brand}.com" or hostname.endswith(f".{brand}.com"):
                 continue
 
-            dist = levenshtein_distance(main_label, brand)
-            if dist in (1, 2) and dist < min_dist:
-                min_dist = dist
-                matched_brand = brand
-            elif brand in main_label and main_label != brand:
-                matched_brand = brand
-                min_dist = 0
+            for token in tokens:
+                dist = levenshtein_distance(token, brand)
+                if dist in (1, 2) and dist < min_dist:
+                    min_dist = dist
+                    matched_brand = brand
+                elif brand in token and token != brand:
+                    matched_brand = brand
+                    min_dist = 0
 
         if matched_brand:
             severity = Severity.CRITICAL.value if min_dist in (0, 1) else Severity.HIGH.value

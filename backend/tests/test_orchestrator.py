@@ -4,6 +4,10 @@ Tests for scan orchestrator module registration and risk score computation.
 from app.scanner.orchestrator import ScanOrchestrator, ModuleInterface
 from app.models.finding import FindingDocument, Severity, FindingCategory
 from app.scanner.modules.placeholder import PlaceholderModule
+from app.scanner.modules.url_detection import UrlDetectionModule
+from app.scanner.modules.tls_validation import TlsValidationModule
+from app.scanner.modules.security_assessment import SecurityAssessmentModule
+from app.scanner.modules.risk_scoring import RiskScoringModule
 
 
 def test_orchestrator_module_registration():
@@ -17,6 +21,23 @@ def test_orchestrator_module_registration():
 
     orch.unregister_module("placeholder")
     assert len(orch.list_modules()) == 0
+
+
+def test_orchestrator_all_modules_registered():
+    orch = ScanOrchestrator()
+    orch.register_module(PlaceholderModule())
+    orch.register_module(UrlDetectionModule())
+    orch.register_module(TlsValidationModule())
+    orch.register_module(SecurityAssessmentModule())
+    orch.register_module(RiskScoringModule())
+
+    registered = [m["name"] for m in orch.list_modules()]
+    assert "placeholder" in registered
+    assert "url_detection" in registered
+    assert "tls_validation" in registered
+    assert "security_assessment" in registered
+    assert "risk_scoring" in registered
+    assert len(registered) == 5
 
 
 def test_basic_risk_score_calculation():
