@@ -66,3 +66,29 @@ def test_entity_and_relationship():
         scan_id="scan-xyz",
     )
     assert rel.type == RelationshipType.RESOLVES_TO
+
+
+def test_scan_request_normalization():
+    # Standard format
+    req1 = ScanRequest(url="https://valid.com", modules=["url_detection"])
+    assert req1.url == "https://valid.com"
+    assert req1.modules == ["url_detection"]
+
+    # Alias format from legacy frontend
+    req2 = ScanRequest.model_validate({
+        "target_url": "https://aliased.com",
+        "requested_modules": ["tls_validation"],
+    })
+    assert req2.url == "https://aliased.com"
+    assert req2.modules == ["tls_validation"]
+
+
+def test_scan_request_validation():
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        ScanRequest.model_validate({"url": "  "})
+
+    with pytest.raises(ValidationError):
+        ScanRequest.model_validate({})

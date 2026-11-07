@@ -294,7 +294,7 @@ class ScanOrchestrator:
             await db.entities.update_one(
                 {"type": entity_dict["type"], "value": entity_dict["value"]},
                 {
-                    "$set": {k: v for k, v in entity_dict.items() if k not in ("scan_ids",)},
+                    "$set": {k: v for k, v in entity_dict.items() if k not in ("scan_ids", "first_seen", "_id")},
                     "$addToSet": {"scan_ids": scan_doc.scan_id},
                     "$setOnInsert": {"first_seen": entity_dict.get("first_seen", datetime.utcnow())},
                 },

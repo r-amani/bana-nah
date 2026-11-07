@@ -59,14 +59,22 @@ export default function ScannerHome({ onScanComplete, initialUrl = '' }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          target_url: formatted,
-          requested_modules: selectedModules,
+          url: formatted,
+          modules: selectedModules,
         }),
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Scan request failed');
+        const errData = await res.json().catch(() => ({}));
+        let message = 'Scan request failed';
+        if (typeof errData.detail === 'string') {
+          message = errData.detail;
+        } else if (Array.isArray(errData.detail)) {
+          message = errData.detail
+            .map(d => `${d.loc ? d.loc.filter(l => l !== 'body').join('.') + ': ' : ''}${d.msg}`)
+            .join('; ');
+        }
+        throw new Error(message || `Scan request failed with status ${res.status}`);
       }
 
       const scanResult = await res.json();

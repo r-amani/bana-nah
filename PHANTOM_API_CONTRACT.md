@@ -114,7 +114,43 @@ POST /api/scans
 
 ---
 
-### 3. Get Scan
+### 3. List Scans
+
+```
+GET /api/scans?limit=10&offset=0
+```
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit`   | int  | 10      | Maximum number of scans to return (1-100) |
+| `offset`  | int  | 0       | Number of scans to skip (>= 0) |
+
+**Response (200):**
+```json
+[
+  {
+    "scan_id": "uuid",
+    "target_url": "https://example.com",
+    "hostname": "example.com",
+    "status": "completed",
+    "created_at": "2026-11-07T12:00:00",
+    "completed_at": "2026-11-07T12:00:01",
+    "duration_ms": 1234.56,
+    "risk_score": 42.5,
+    "risk_level": "medium",
+    "module_results": [],
+    "summary": "Scan completed..."
+  }
+]
+```
+
+**Errors:**
+- `503`: Database unavailable
+
+---
+
+### 4. Get Scan
 
 ```
 GET /api/scans/{scan_id}

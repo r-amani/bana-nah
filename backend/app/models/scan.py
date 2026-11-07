@@ -4,8 +4,8 @@ Pydantic models for scan requests, responses, and database documents.
 """
 from datetime import datetime
 from enum import Enum
-from typing import Optional
-from pydantic import BaseModel, Field, HttpUrl
+from typing import Optional, Any
+from pydantic import BaseModel, Field, HttpUrl, model_validator, field_validator
 import uuid
 
 
@@ -37,6 +37,27 @@ class ScanRequest(BaseModel):
         examples=[["url_detection", "tls_validation", "security_assessment"]],
     )
 
+    model_config = {"extra": "ignore"}
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Accept target_url if url is not provided
+            if "url" not in data and "target_url" in data:
+                data = {**data, "url": data["target_url"]}
+            # Accept requested_modules if modules is not provided
+            if "modules" not in data and "requested_modules" in data:
+                data = {**data, "modules": data["requested_modules"]}
+        return data
+
+    @field_validator("url")
+    @classmethod
+    def validate_url_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Target URL cannot be empty")
+        return v.strip()
+
 
 class ModuleResult(BaseModel):
     """Result from a single scan module."""
@@ -47,6 +68,8 @@ class ModuleResult(BaseModel):
     duration_ms: Optional[float] = None
     data: Optional[dict] = Field(default=None, description="Module-specific result data")
     error: Optional[str] = Field(default=None, description="Error message if module failed")
+
+    model_config = {"extra": "ignore"}
 
 
 class ScanResponse(BaseModel):
@@ -63,6 +86,8 @@ class ScanResponse(BaseModel):
     module_results: list[ModuleResult] = Field(default_factory=list)
     summary: Optional[str] = Field(default=None, description="Human-readable scan summary")
 
+    model_config = {"extra": "ignore"}
+
 
 class ScanDocument(BaseModel):
     """MongoDB document schema for scans."""
@@ -78,3 +103,5 @@ class ScanDocument(BaseModel):
     module_results: list[dict] = Field(default_factory=list)
     summary: Optional[str] = None
     request_ip: Optional[str] = None
+
+    model_config = {"extra": "ignore"}

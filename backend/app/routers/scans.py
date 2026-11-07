@@ -3,7 +3,7 @@ PHANTOM Scans Router
 Endpoints for initiating and retrieving scans.
 """
 import logging
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
 from app.models.scan import ScanRequest, ScanResponse
 from app.models.finding import FindingResponse
 from app.database import get_db
@@ -37,7 +37,31 @@ async def create_scan(scan_request: ScanRequest, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         logger.exception("Scan failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Scan failed: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail=f"Scan failed: {str(e)}")
+
+
+@router.get("/scans", response_model=list[ScanResponse], summary="List recent scans")
+async def list_scans(
+    limit: int = Query(default=10, ge=1, le=100, description="Max results to return"),
+    offset: int = Query(default=0, ge=0, description="Offset for pagination"),
+):
+    """
+    Retrieve persisted scan records sorted by creation timestamp descending.
+    Supports limit and offset query parameters.
+    """
+    try:
+        db = get_db()
+    except RuntimeError:
+        raise HTTPException(status_code=503, detail="Database is not available")
+
+    scans = await (
+        db.scans.find({}, {"_id": 0})
+        .sort("created_at", -1)
+        .skip(offset)
+        .limit(limit)
+        .to_list(length=limit)
+    )
+    return [ScanResponse(**s) for s in scans]
 
 
 @router.get("/scans/{scan_id}", response_model=ScanResponse, summary="Get scan details")
