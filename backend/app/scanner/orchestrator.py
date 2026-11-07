@@ -134,6 +134,8 @@ class ScanOrchestrator:
         all_relationships = []
 
         if modules_to_run:
+            # Separate risk_scoring to run after primary modules so it can evaluate aggregated findings
+            scoring_mod = modules_to_run.pop("risk_scoring", None)
             tasks = {
                 name: asyncio.create_task(
                     self._execute_module_safe(mod, validated_url, hostname, scan_doc.scan_id)
@@ -157,6 +159,22 @@ class ScanOrchestrator:
                     all_relationships.extend(result.get("relationships", []))
 
                 scan_doc.module_results.append(module_result.model_dump() if isinstance(module_result, ModuleResult) else module_result)
+
+            # If risk_scoring was requested, execute it with aggregated findings
+            if scoring_mod:
+                try:
+                    score_res = await self._execute_module_safe(
+                        scoring_mod, validated_url, hostname, scan_doc.scan_id, findings=all_findings
+                    )
+                    module_result = score_res["module_result"]
+                    all_findings.extend(score_res.get("findings", []))
+                    all_entities.extend(score_res.get("entities", []))
+                    all_relationships.extend(score_res.get("relationships", []))
+                    scan_doc.module_results.append(module_result.model_dump() if isinstance(module_result, ModuleResult) else module_result)
+                except Exception as e:
+                    scan_doc.module_results.append(
+                        ModuleResult(module="risk_scoring", status=ModuleStatus.FAILED, error=str(e)).model_dump()
+                    )
 
         # Step 5: Compute overall status
         statuses = [ModuleStatus(r.get("status", "failed") if isinstance(r, dict) else r.status) for r in scan_doc.module_results]
@@ -216,7 +234,7 @@ class ScanOrchestrator:
 
         return scan_doc.model_dump()
 
-    async def _execute_module_safe(self, module: ModuleInterface, url: str, hostname: str, scan_id: str) -> dict:
+    async def _execute_module_safe(self, module: ModuleInterface, url: str, hostname: str, scan_id: str, **kwargs) -> dict:
         """Execute a module with timing and error handling."""
         start = time.time()
         module_result = ModuleResult(
@@ -227,7 +245,7 @@ class ScanOrchestrator:
 
         try:
             result = await asyncio.wait_for(
-                module.execute(url, hostname, scan_id),
+                module.execute(url, hostname, scan_id, **kwargs),
                 timeout=30.0,  # Per-module timeout
             )
             elapsed = (time.time() - start) * 1000

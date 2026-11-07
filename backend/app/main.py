@@ -17,6 +17,10 @@ from app.database import connect_db, close_db
 from app.routers import scans, domains, reports, entities, graph, health
 from app.scanner.orchestrator import orchestrator
 from app.scanner.modules.placeholder import PlaceholderModule
+from app.scanner.modules.url_detection import UrlDetectionModule
+from app.scanner.modules.tls_validation import TlsValidationModule
+from app.scanner.modules.security_assessment import SecurityAssessmentModule
+from app.scanner.modules.risk_scoring import RiskScoringModule
 
 # Configure logging
 logging.basicConfig(
@@ -87,6 +91,10 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Register scan modules
 orchestrator.register_module(PlaceholderModule())
+orchestrator.register_module(UrlDetectionModule())
+orchestrator.register_module(TlsValidationModule())
+orchestrator.register_module(SecurityAssessmentModule())
+orchestrator.register_module(RiskScoringModule())
 
 # Register routers
 app.include_router(health.router, tags=["Health"])
