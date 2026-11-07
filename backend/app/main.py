@@ -21,6 +21,10 @@ from app.scanner.modules.url_detection import UrlDetectionModule
 from app.scanner.modules.tls_validation import TlsValidationModule
 from app.scanner.modules.security_assessment import SecurityAssessmentModule
 from app.scanner.modules.risk_scoring import RiskScoringModule
+from app.scanner.modules.community_intelligence import CommunityIntelligenceModule
+from app.scanner.modules.flight_recorder import FlightRecorderModule
+from app.scanner.modules.attack_fingerprint import AttackFingerprintModule
+from app.scanner.modules.graph_enrichment import GraphEnrichmentModule
 
 # Configure logging
 logging.basicConfig(
@@ -95,6 +99,10 @@ orchestrator.register_module(UrlDetectionModule())
 orchestrator.register_module(TlsValidationModule())
 orchestrator.register_module(SecurityAssessmentModule())
 orchestrator.register_module(RiskScoringModule())
+orchestrator.register_module(CommunityIntelligenceModule())
+orchestrator.register_module(FlightRecorderModule())
+orchestrator.register_module(AttackFingerprintModule())
+orchestrator.register_module(GraphEnrichmentModule())
 
 # Register routers
 app.include_router(health.router, tags=["Health"])

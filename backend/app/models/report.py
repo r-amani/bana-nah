@@ -13,6 +13,8 @@ class ReportStatus(str, Enum):
     """Report review status."""
     PENDING = "pending"
     VERIFIED = "verified"
+    CORROBORATED = "corroborated"
+    DISPUTED = "disputed"
     REJECTED = "rejected"
     UNDER_REVIEW = "under_review"
 

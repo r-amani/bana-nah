@@ -38,6 +38,9 @@ class RelationshipType(str, Enum):
     SIMILAR_TO = "similar_to"
     PART_OF_NETWORK = "part_of_network"
     CONTACTED_BY = "contacted_by"
+    REPORTED_BY = "reported_by"
+    SHARES_INDICATOR = "shares_indicator_with"
+    POTENTIALLY_RELATED_TO = "potentially_related_to"
 
 
 class EntityDocument(BaseModel):

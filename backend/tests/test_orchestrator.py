@@ -8,6 +8,10 @@ from app.scanner.modules.url_detection import UrlDetectionModule
 from app.scanner.modules.tls_validation import TlsValidationModule
 from app.scanner.modules.security_assessment import SecurityAssessmentModule
 from app.scanner.modules.risk_scoring import RiskScoringModule
+from app.scanner.modules.community_intelligence import CommunityIntelligenceModule
+from app.scanner.modules.flight_recorder import FlightRecorderModule
+from app.scanner.modules.attack_fingerprint import AttackFingerprintModule
+from app.scanner.modules.graph_enrichment import GraphEnrichmentModule
 
 
 def test_orchestrator_module_registration():
@@ -38,6 +42,26 @@ def test_orchestrator_all_modules_registered():
     assert "security_assessment" in registered
     assert "risk_scoring" in registered
     assert len(registered) == 5
+
+
+def test_orchestrator_full_nine_modules_registration():
+    orch = ScanOrchestrator()
+    orch.register_module(PlaceholderModule())
+    orch.register_module(UrlDetectionModule())
+    orch.register_module(TlsValidationModule())
+    orch.register_module(SecurityAssessmentModule())
+    orch.register_module(RiskScoringModule())
+    orch.register_module(CommunityIntelligenceModule())
+    orch.register_module(FlightRecorderModule())
+    orch.register_module(AttackFingerprintModule())
+    orch.register_module(GraphEnrichmentModule())
+
+    registered = [m["name"] for m in orch.list_modules()]
+    assert len(registered) == 9
+    assert "community_intelligence" in registered
+    assert "flight_recorder" in registered
+    assert "attack_fingerprint" in registered
+    assert "graph_enrichment" in registered
 
 
 def test_basic_risk_score_calculation():

@@ -76,13 +76,15 @@ class ScanOrchestrator:
         """
         Execute a full scan against the target URL.
 
-        Steps:
-        1. Validate the URL (SSRF protection)
-        2. Create a scan document
-        3. Run all requested modules (or all registered)
-        4. Aggregate results
-        5. Compute risk score
-        6. Store everything in the database
+        Pipeline Stages:
+        1. URL Validation & DNS SSRF defense
+        2. Create scan document
+        3. Primary Detection Modules (URL, TLS, Security Assessment, Community Intel)
+        4. Explainable Risk Scoring Engine
+        5. Phishing Flight Recorder (Snapshot & Drift)
+        6. Attack Family Fingerprinting (Campaign clustering)
+        7. Graph Enrichment (Investigation topology)
+        8. Persist all findings, entities, and relationships
         """
         start_time = time.time()
 
@@ -128,39 +130,49 @@ class ScanOrchestrator:
         else:
             modules_to_run = dict(self._modules)
 
-        # Step 4: Execute modules concurrently
+        # Step 4: Execute modules in coordinated pipeline stages
         all_findings = []
         all_entities = []
         all_relationships = []
 
         if modules_to_run:
-            # Separate risk_scoring to run after primary modules so it can evaluate aggregated findings
+            # Extract downstream sequential modules
             scoring_mod = modules_to_run.pop("risk_scoring", None)
-            tasks = {
-                name: asyncio.create_task(
-                    self._execute_module_safe(mod, validated_url, hostname, scan_doc.scan_id)
-                )
-                for name, mod in modules_to_run.items()
-            }
+            flight_mod = modules_to_run.pop("flight_recorder", None)
+            fingerprint_mod = modules_to_run.pop("attack_fingerprint", None)
+            graph_mod = modules_to_run.pop("graph_enrichment", None)
 
-            results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-
-            for (name, _), result in zip(tasks.items(), results):
-                if isinstance(result, Exception):
-                    module_result = ModuleResult(
-                        module=name,
-                        status=ModuleStatus.FAILED,
-                        error=str(result),
+            # Stage 1: Primary Detection Modules (run concurrently)
+            # URL Threat Detection, TLS Validation, Security Assessment, Community Intelligence, Placeholder
+            if modules_to_run:
+                tasks = {
+                    name: asyncio.create_task(
+                        self._execute_module_safe(mod, validated_url, hostname, scan_doc.scan_id, resolved_ip=resolved_ip)
                     )
-                else:
-                    module_result = result["module_result"]
-                    all_findings.extend(result.get("findings", []))
-                    all_entities.extend(result.get("entities", []))
-                    all_relationships.extend(result.get("relationships", []))
+                    for name, mod in modules_to_run.items()
+                }
 
-                scan_doc.module_results.append(module_result.model_dump() if isinstance(module_result, ModuleResult) else module_result)
+                results = await asyncio.gather(*tasks.values(), return_exceptions=True)
 
-            # If risk_scoring was requested, execute it with aggregated findings
+                for (name, _), result in zip(tasks.items(), results):
+                    if isinstance(result, Exception):
+                        module_result = ModuleResult(
+                            module=name,
+                            status=ModuleStatus.FAILED,
+                            error=str(result),
+                        )
+                    else:
+                        module_result = result["module_result"]
+                        all_findings.extend(result.get("findings", []))
+                        all_entities.extend(result.get("entities", []))
+                        all_relationships.extend(result.get("relationships", []))
+
+                    scan_doc.module_results.append(module_result.model_dump() if isinstance(module_result, ModuleResult) else module_result)
+
+            # Stage 2: Risk Scoring Engine (evaluates aggregated primary findings)
+            computed_risk_score = self._compute_basic_risk_score(all_findings)
+            computed_risk_level = self._risk_level(computed_risk_score)
+
             if scoring_mod:
                 try:
                     score_res = await self._execute_module_safe(
@@ -171,9 +183,82 @@ class ScanOrchestrator:
                     all_entities.extend(score_res.get("entities", []))
                     all_relationships.extend(score_res.get("relationships", []))
                     scan_doc.module_results.append(module_result.model_dump() if isinstance(module_result, ModuleResult) else module_result)
+
+                    if isinstance(module_result.data, dict) and "risk_score" in module_result.data:
+                        computed_risk_score = float(module_result.data["risk_score"])
+                        computed_risk_level = module_result.data.get("risk_level", computed_risk_level)
                 except Exception as e:
                     scan_doc.module_results.append(
                         ModuleResult(module="risk_scoring", status=ModuleStatus.FAILED, error=str(e)).model_dump()
+                    )
+
+            scan_doc.risk_score = computed_risk_score
+            scan_doc.risk_level = computed_risk_level
+
+            # Stage 3: Phishing Flight Recorder (preserves snapshot and calculates historical deltas)
+            if flight_mod:
+                try:
+                    flight_res = await self._execute_module_safe(
+                        flight_mod,
+                        validated_url,
+                        hostname,
+                        scan_doc.scan_id,
+                        findings=all_findings,
+                        module_results=scan_doc.module_results,
+                        risk_score=scan_doc.risk_score,
+                        risk_level=scan_doc.risk_level,
+                    )
+                    module_result = flight_res["module_result"]
+                    all_findings.extend(flight_res.get("findings", []))
+                    all_entities.extend(flight_res.get("entities", []))
+                    all_relationships.extend(flight_res.get("relationships", []))
+                    scan_doc.module_results.append(module_result.model_dump() if isinstance(module_result, ModuleResult) else module_result)
+                except Exception as e:
+                    scan_doc.module_results.append(
+                        ModuleResult(module="flight_recorder", status=ModuleStatus.FAILED, error=str(e)).model_dump()
+                    )
+
+            # Stage 4: Attack Family Fingerprinting (identifies related domains and shared infrastructure)
+            if fingerprint_mod:
+                try:
+                    finger_res = await self._execute_module_safe(
+                        fingerprint_mod,
+                        validated_url,
+                        hostname,
+                        scan_doc.scan_id,
+                        findings=all_findings,
+                        entities=all_entities,
+                        relationships=all_relationships,
+                    )
+                    module_result = finger_res["module_result"]
+                    all_findings.extend(finger_res.get("findings", []))
+                    all_entities.extend(finger_res.get("entities", []))
+                    all_relationships.extend(finger_res.get("relationships", []))
+                    scan_doc.module_results.append(module_result.model_dump() if isinstance(module_result, ModuleResult) else module_result)
+                except Exception as e:
+                    scan_doc.module_results.append(
+                        ModuleResult(module="attack_fingerprint", status=ModuleStatus.FAILED, error=str(e)).model_dump()
+                    )
+
+            # Stage 5: Graph Enrichment (synthesizes, deduplicates, and connects nodes/edges)
+            if graph_mod:
+                try:
+                    graph_res = await self._execute_module_safe(
+                        graph_mod,
+                        validated_url,
+                        hostname,
+                        scan_doc.scan_id,
+                        findings=all_findings,
+                        entities=all_entities,
+                        relationships=all_relationships,
+                    )
+                    module_result = graph_res["module_result"]
+                    all_entities = graph_res.get("entities", all_entities)
+                    all_relationships = graph_res.get("relationships", all_relationships)
+                    scan_doc.module_results.append(module_result.model_dump() if isinstance(module_result, ModuleResult) else module_result)
+                except Exception as e:
+                    scan_doc.module_results.append(
+                        ModuleResult(module="graph_enrichment", status=ModuleStatus.FAILED, error=str(e)).model_dump()
                     )
 
         # Step 5: Compute overall status
@@ -187,18 +272,13 @@ class ScanOrchestrator:
         else:
             scan_doc.status = ScanStatus.FAILED
 
-        # Step 6: Compute risk score (placeholder — the risk scoring module will override)
-        risk_score = self._compute_basic_risk_score(all_findings)
-        scan_doc.risk_score = risk_score
-        scan_doc.risk_level = self._risk_level(risk_score)
-
         # Timing
         elapsed = (time.time() - start_time) * 1000
         scan_doc.completed_at = datetime.utcnow()
         scan_doc.duration_ms = round(elapsed, 2)
-        scan_doc.summary = f"Scan completed in {elapsed:.0f}ms with {len(all_findings)} findings."
+        scan_doc.summary = f"Scan completed in {elapsed:.0f}ms with {len(all_findings)} findings across {len(scan_doc.module_results)} modules."
 
-        # Step 7: Persist results
+        # Step 6: Persist results
         await db.scans.update_one(
             {"scan_id": scan_doc.scan_id},
             {"$set": scan_doc.model_dump()},
@@ -228,8 +308,9 @@ class ScanOrchestrator:
             )
 
         logger.info(
-            "Scan %s completed — status: %s, risk: %.1f (%s), findings: %d",
-            scan_doc.scan_id, scan_doc.status, risk_score, scan_doc.risk_level, len(all_findings),
+            "Scan %s completed — status: %s, risk: %.1f (%s), findings: %d, entities: %d, relationships: %d",
+            scan_doc.scan_id, scan_doc.status, scan_doc.risk_score, scan_doc.risk_level,
+            len(all_findings), len(all_entities), len(all_relationships),
         )
 
         return scan_doc.model_dump()
