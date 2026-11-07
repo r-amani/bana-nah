@@ -44,27 +44,34 @@ export default function Dashboard({ onNavigate, onSelectScan }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1160, margin: '0 auto' }}>
       {/* Platform Title Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.08) 100%)',
-        border: '1px solid #23304c',
-        borderRadius: 14,
-        padding: 24,
+        background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+        border: '1.5px solid #bae6fd',
+        borderRadius: 20,
+        padding: '28px 32px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: 16,
+        boxShadow: '0 4px 16px rgba(2, 132, 199, 0.06)',
       }}>
         <div>
-          <span style={{ fontSize: 12, color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>
+          <span style={{
+            fontSize: 12,
+            color: '#0284c7',
+            fontWeight: 700,
+            letterSpacing: '.06em',
+            textTransform: 'uppercase',
+          }}>
             Threat Operations Overview
           </span>
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: '#f8fafc', marginTop: 4 }}>
+          <h2 style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>
             PHANTOM Cyber Threat Intelligence Hub
           </h2>
-          <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>
+          <p style={{ fontSize: 14, color: '#475569', marginTop: 4 }}>
             Continuous passive monitoring, lexical homograph analysis, and investigation graph topology.
           </p>
         </div>
@@ -72,105 +79,187 @@ export default function Dashboard({ onNavigate, onSelectScan }) {
         <button
           onClick={() => onNavigate('scanner')}
           style={{
-            background: 'linear-gradient(135deg, #6366f1, #06b6d4)',
-            color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8,
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            background: 'linear-gradient(135deg, #0284c7, #0ea5e9)',
+            color: '#ffffff',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: 999,
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(2, 132, 199, 0.3)',
+            transition: 'all 0.15s ease',
           }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'none'}
         >
           New URL Scan →
         </button>
       </div>
 
       {/* Metrics Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-        <div style={{ background: '#151d30', padding: 20, borderRadius: 12, border: '1px solid #23304c' }}>
-          <span style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase' }}>Total Scans</span>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#f8fafc', marginTop: 8, fontFamily: 'JetBrains Mono' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+        <div style={{
+          background: '#ffffff',
+          padding: '22px 24px',
+          borderRadius: 16,
+          border: '1.5px solid var(--border-subtle)',
+          boxShadow: 'var(--shadow-sm)',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', color: '#64748b', textTransform: 'uppercase' }}>
+            Total Scans
+          </span>
+          <div style={{ fontSize: 34, fontWeight: 800, color: '#0284c7', marginTop: 8, fontFamily: 'IBM Plex Mono' }}>
             {stats.totalScans}
           </div>
-          <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Completed investigations</p>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Completed investigations</p>
         </div>
 
-        <div style={{ background: '#151d30', padding: 20, borderRadius: 12, border: '1px solid #23304c' }}>
-          <span style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase' }}>High & Critical Threats</span>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#f43f5e', marginTop: 8, fontFamily: 'JetBrains Mono' }}>
+        <div style={{
+          background: '#ffffff',
+          padding: '22px 24px',
+          borderRadius: 16,
+          border: '1.5px solid var(--border-subtle)',
+          boxShadow: 'var(--shadow-sm)',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', color: '#64748b', textTransform: 'uppercase' }}>
+            High & Critical Threats
+          </span>
+          <div style={{ fontSize: 34, fontWeight: 800, color: '#e11d48', marginTop: 8, fontFamily: 'IBM Plex Mono' }}>
             {stats.highRiskScans}
           </div>
-          <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Risk score &gt;= 50</p>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Risk score &ge; 50</p>
         </div>
 
-        <div style={{ background: '#151d30', padding: 20, borderRadius: 12, border: '1px solid #23304c' }}>
-          <span style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase' }}>Community Reports</span>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#f59e0b', marginTop: 8, fontFamily: 'JetBrains Mono' }}>
+        <div style={{
+          background: '#ffffff',
+          padding: '22px 24px',
+          borderRadius: 16,
+          border: '1.5px solid var(--border-subtle)',
+          boxShadow: 'var(--shadow-sm)',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', color: '#64748b', textTransform: 'uppercase' }}>
+            Community Reports
+          </span>
+          <div style={{ fontSize: 34, fontWeight: 800, color: '#d97706', marginTop: 8, fontFamily: 'IBM Plex Mono' }}>
             {stats.totalReports}
           </div>
-          <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Crowdsourced submissions</p>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Crowdsourced submissions</p>
         </div>
 
-        <div style={{ background: '#151d30', padding: 20, borderRadius: 12, border: '1px solid #23304c' }}>
-          <span style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase' }}>Investigation Graph Nodes</span>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#38bdf8', marginTop: 8, fontFamily: 'JetBrains Mono' }}>
+        <div style={{
+          background: '#ffffff',
+          padding: '22px 24px',
+          borderRadius: 16,
+          border: '1.5px solid var(--border-subtle)',
+          boxShadow: 'var(--shadow-sm)',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', color: '#64748b', textTransform: 'uppercase' }}>
+            Investigation Graph Nodes
+          </span>
+          <div style={{ fontSize: 34, fontWeight: 800, color: '#0d9488', marginTop: 8, fontFamily: 'IBM Plex Mono' }}>
             {stats.graphNodes}
           </div>
-          <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Correlated infrastructure entities</p>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Correlated infrastructure entities</p>
         </div>
       </div>
 
       {/* Recent Scans Activity Table */}
-      <div style={{ background: '#151d30', borderRadius: 14, border: '1px solid #23304c', padding: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>
-            Recent Threat Investigations
-          </h3>
+      <div style={{
+        background: '#ffffff',
+        borderRadius: 18,
+        border: '1.5px solid var(--border-subtle)',
+        padding: '24px 28px',
+        boxShadow: 'var(--shadow-sm)',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: '#0f172a' }}>
+              Recent Threat Investigations
+            </h3>
+            <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
+              Historical scans recorded across all intelligence modules.
+            </p>
+          </div>
           <button
             onClick={() => onNavigate('scanner')}
-            style={{ background: 'transparent', border: 'none', color: '#38bdf8', fontSize: 12, cursor: 'pointer' }}
+            style={{
+              background: '#f0f9ff',
+              border: '1.5px solid #bae6fd',
+              color: '#0284c7',
+              padding: '6px 15px',
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
           >
             Launch Investigation →
           </button>
         </div>
 
         {stats.recentScans.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-            No recent scans executed yet.
+          <div style={{ padding: 48, textAlign: 'center', color: '#94a3b8' }}>
+            No recent scans executed yet. Use the Scanner tab to run your first investigation.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {stats.recentScans.map(scan => {
               const score = scan.risk_score || 0;
               const isHigh = score >= 50;
+              const isSuspicious = score >= 25 && score < 50;
+              const badgeBg = isHigh ? '#fff1f2' : isSuspicious ? '#fefce8' : '#ecfdf5';
+              const badgeColor = isHigh ? '#e11d48' : isSuspicious ? '#b45309' : '#059669';
+              const badgeBorder = isHigh ? '#fecdd3' : isSuspicious ? '#fef08a' : '#a7f3d0';
 
               return (
                 <div
                   key={scan.scan_id}
                   onClick={() => { onSelectScan(scan); onNavigate('report'); }}
                   style={{
-                    background: '#0c101c', borderRadius: 8, border: '1px solid #23304c', padding: 14,
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    cursor: 'pointer', transition: 'border-color 0.15s ease',
+                    background: '#f8fafc',
+                    borderRadius: 12,
+                    border: '1px solid #e2e8f0',
+                    padding: '14px 18px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = '#38bdf8'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = '#23304c'}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#f0f7ff';
+                    e.currentTarget.style.borderColor = '#bae6fd';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = '#f8fafc';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <span style={{
-                      fontSize: 11, fontWeight: 800, padding: '3px 8px', borderRadius: 4,
-                      background: isHigh ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                      color: isHigh ? '#fda4af' : '#6ee7b7',
+                      fontSize: 12,
+                      fontWeight: 800,
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                      background: badgeBg,
+                      color: badgeColor,
+                      border: `1px solid ${badgeBorder}`,
+                      fontFamily: 'IBM Plex Mono',
                     }}>
                       {score.toFixed(1)}/100
                     </span>
                     <div>
-                      <h4 style={{ fontSize: 13, fontWeight: 600, color: '#f8fafc', fontFamily: 'JetBrains Mono' }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', fontFamily: 'IBM Plex Mono' }}>
                         {scan.hostname || scan.target_url}
                       </h4>
-                      <p style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                      <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
                         {new Date(scan.created_at).toLocaleString()} • Duration: {scan.duration_ms}ms
                       </p>
                     </div>
                   </div>
 
-                  <span style={{ fontSize: 12, color: '#38bdf8', fontWeight: 600 }}>
+                  <span style={{ fontSize: 13, color: '#0284c7', fontWeight: 600 }}>
                     Inspect Report →
                   </span>
                 </div>

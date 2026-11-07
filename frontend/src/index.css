@@ -1,19 +1,46 @@
 :root {
-  --bg-primary: #0a0d14;
-  --bg-surface: #111726;
-  --bg-card: #151d30;
-  --bg-card-hover: #1c263d;
-  --border-color: #23304c;
-  --border-focus: #3b82f6;
+  --bg-app: #f4f8fb;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f7ff;
+  
+  --border-subtle: #e2e8f0;
+  --border-medium: #cbd5e1;
+  --border-focus: #0284c7;
+  
+  --accent-primary: #0284c7;
+  --accent-primary-hover: #0369a1;
+  --accent-light: #e0f2fe;
+  --accent-light-2: #f0f9ff;
   --accent-cyan: #06b6d4;
-  --accent-indigo: #6366f1;
-  --accent-emerald: #10b981;
-  --accent-amber: #f59e0b;
-  --accent-rose: #f43f5e;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --accent-teal: #0d9488;
+  --accent-indigo: #4f46e5;
+  
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #94a3b8;
+  
+  --threat-critical: #e11d48;
+  --threat-critical-bg: #fff1f2;
+  --threat-critical-border: #fecdd3;
+  
+  --threat-high: #ea580c;
+  --threat-high-bg: #fff7ed;
+  --threat-high-border: #fed7aa;
+  
+  --threat-medium: #d97706;
+  --threat-medium-bg: #fefce8;
+  --threat-medium-border: #fef08a;
+  
+  --threat-safe: #059669;
+  --threat-safe-bg: #ecfdf5;
+  --threat-safe-border: #a7f3d0;
+  
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  --shadow-lg: 0 10px 25px -4px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.03);
+  --shadow-glow: 0 0 20px -3px rgba(2, 132, 199, 0.22);
 }
 
 * {
@@ -23,78 +50,277 @@
 }
 
 body {
-  background-color: var(--bg-primary);
+  background-color: var(--bg-app);
   color: var(--text-main);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 code, pre, .font-mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
-/* Scrollbar */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: var(--bg-app);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: #cbd5e1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #94a3b8;
 }
 
-/* Glass & Glow */
-.glass-panel {
-  background: rgba(17, 23, 38, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-color);
+/* Screen reader utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
-.glow-cyan {
-  box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.3);
+/* Rail Navigation Classes */
+.rail-nav {
+  width: 82px;
+  background: #ffffff;
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 0;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.glow-rose {
-  box-shadow: 0 0 20px -5px rgba(244, 63, 94, 0.3);
+.rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
-.glow-amber {
-  box-shadow: 0 0 20px -5px rgba(245, 158, 11, 0.3);
+.rail-btn:hover {
+  background: #f0f7ff;
+  color: var(--accent-primary);
 }
 
-/* Custom badges */
-.badge-critical {
-  background: rgba(244, 63, 94, 0.15);
-  color: #fda4af;
-  border: 1px solid rgba(244, 63, 94, 0.35);
+.rail-btn.active {
+  background: var(--accent-light);
+  color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
-.badge-high {
-  background: rgba(249, 115, 22, 0.15);
-  color: #fdba74;
-  border: 1px solid rgba(249, 115, 22, 0.35);
+.rail-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
-.badge-medium {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fde68a;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+.rail-divider {
+  width: 28px;
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 6px 0;
 }
 
-.badge-low {
-  background: rgba(59, 130, 246, 0.15);
-  color: #93c5fd;
-  border: 1px solid rgba(59, 130, 246, 0.35);
+/* Interactive Pill Input */
+.pill-input-box {
+  width: 100%;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 5px 7px 5px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.08);
+  transition: all 0.2s ease;
 }
 
-.badge-info {
-  background: rgba(148, 163, 184, 0.15);
-  color: #cbd5e1;
-  border: 1px solid rgba(148, 163, 184, 0.35);
+.pill-input-box:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.16);
+}
+
+.pill-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+}
+
+.pill-scan-btn:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+  transform: scale(1.04);
+}
+
+.pill-scan-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Circular Module Check Buttons */
+.chk-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 92px;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chk-btn .chk-circle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.chk-btn:hover .chk-circle {
+  border-color: #94a3b8;
+  color: #475569;
+}
+
+.chk-btn[aria-pressed="true"] {
+  color: var(--accent-primary);
+}
+
+.chk-btn[aria-pressed="true"] .chk-circle {
+  border-color: var(--accent-primary);
+  background: var(--accent-light);
+  color: var(--accent-primary);
+}
+
+.chk-btn .chk-badge {
+  display: none;
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: #ffffff;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.chk-btn[aria-pressed="true"] .chk-badge {
+  display: flex;
+}
+
+/* Tool Shortcuts Launchers */
+.tool-launcher {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 110px;
+  color: #475569;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.tool-launcher .tool-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #e0f2fe;
+  color: var(--accent-primary);
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.08);
+  transition: all 0.2s ease;
+}
+
+.tool-launcher:hover .tool-circle {
+  background: var(--accent-light);
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.18);
+}
+
+.tool-launcher:hover {
+  color: var(--accent-primary);
+}
+
+.tool-launcher .tool-label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+}
+
+/* Circular Utility Buttons */
+.round-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.round-btn:hover {
+  background: #f0f7ff;
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
 }

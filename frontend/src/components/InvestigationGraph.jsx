@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Entity type badges and colors
+// Entity type badges and colors for light blue & white theme
 const ENTITY_CONFIG = {
-  domain: { color: '#6366f1', label: 'Domain', icon: '🌐' },
-  ip_address: { color: '#06b6d4', label: 'IP Address', icon: '🖥️' },
-  certificate: { color: '#10b981', label: 'Certificate', icon: '🔒' },
-  url: { color: '#f59e0b', label: 'URL', icon: '🔗' },
-  report: { color: '#f43f5e', label: 'Report', icon: '🚩' },
-  nameserver: { color: '#8b5cf6', label: 'Nameserver', icon: '📡' },
-  organization: { color: '#ec4899', label: 'Organization', icon: '🏢' },
+  domain: { color: '#0284c7', label: 'Domain', icon: '🌐' },
+  ip_address: { color: '#0d9488', label: 'IP Address', icon: '🖥️' },
+  certificate: { color: '#059669', label: 'Certificate', icon: '🔒' },
+  url: { color: '#d97706', label: 'URL', icon: '🔗' },
+  report: { color: '#e11d48', label: 'Report', icon: '🚩' },
+  nameserver: { color: '#7c3aed', label: 'Nameserver', icon: '📡' },
+  organization: { color: '#db2777', label: 'Organization', icon: '🏢' },
 };
 
 export default function InvestigationGraph({ scanId, targetDomain, onSelectDomain }) {
@@ -55,15 +55,12 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
   function initializeLayout(nodes, edges) {
     const pos = {};
     const centerNode = nodes.find(n => n.type === 'domain') || nodes[0];
-    const width = 800;
-    const height = 600;
 
     if (nodes.length === 0) {
       setNodePositions({});
       return;
     }
 
-    // Place center node
     if (centerNode) {
       pos[centerNode.entity_id] = { x: 0, y: 0 };
     }
@@ -73,7 +70,6 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
     const total = otherNodes.length;
 
     otherNodes.forEach((node, i) => {
-      // Group by layer/type
       let layer = 1;
       if (node.type === 'url') layer = 0.8;
       else if (node.type === 'ip_address' || node.type === 'certificate') layer = 1.3;
@@ -127,35 +123,38 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
     return true;
   });
 
-  // Extract unique edge types for filter
   const edgeTypes = Array.from(new Set(graphData.edges.map(e => e.type)));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', gap: 16 }}>
       {/* Top Filter Bar */}
       <div style={{
-        background: '#151d30',
+        background: '#ffffff',
         padding: '12px 20px',
-        borderRadius: 12,
-        border: '1px solid #23304c',
+        borderRadius: 16,
+        border: '1.5px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: 12,
+        boxShadow: 'var(--shadow-sm)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600 }}>FILTER NODES:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+            Filter Nodes:
+          </span>
           <select
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
             style={{
-              background: '#0a0d14',
-              color: '#f8fafc',
-              border: '1px solid #23304c',
+              background: '#f8fafc',
+              color: '#0f172a',
+              border: '1.5px solid #cbd5e1',
               padding: '6px 12px',
               borderRadius: 8,
               fontSize: 13,
+              outline: 'none',
             }}
           >
             <option value="all">All Entity Types ({graphData.nodes.length})</option>
@@ -166,17 +165,20 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
             <option value="report">Threat Reports</option>
           </select>
 
-          <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600, marginLeft: 8 }}>RELATIONSHIPS:</span>
+          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginLeft: 4 }}>
+            Relationships:
+          </span>
           <select
             value={filterEdgeType}
             onChange={e => setFilterEdgeType(e.target.value)}
             style={{
-              background: '#0a0d14',
-              color: '#f8fafc',
-              border: '1px solid #23304c',
+              background: '#f8fafc',
+              color: '#0f172a',
+              border: '1.5px solid #cbd5e1',
               padding: '6px 12px',
               borderRadius: 8,
               fontSize: 13,
+              outline: 'none',
             }}
           >
             <option value="all">All Relationships ({graphData.edges.length})</option>
@@ -193,25 +195,27 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
             value={domainFilter}
             onChange={e => setDomainFilter(e.target.value)}
             style={{
-              background: '#0a0d14',
-              color: '#f8fafc',
-              border: '1px solid #23304c',
-              padding: '6px 12px',
-              borderRadius: 8,
+              background: '#f8fafc',
+              color: '#0f172a',
+              border: '1.5px solid #cbd5e1',
+              padding: '6px 14px',
+              borderRadius: 999,
               fontSize: 13,
+              fontFamily: 'IBM Plex Mono',
+              outline: 'none',
               width: 180,
             }}
           />
           <button
             onClick={() => { setPan({ x: 450, y: 300 }); setZoom(1); }}
             style={{
-              background: '#23304c',
-              color: '#f8fafc',
-              border: 'none',
-              padding: '6px 14px',
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 600,
+              background: '#f0f9ff',
+              border: '1.5px solid #bae6fd',
+              color: '#0284c7',
+              padding: '6px 15px',
+              borderRadius: 999,
+              fontSize: 12.5,
+              fontWeight: 700,
               cursor: 'pointer',
             }}
           >
@@ -229,20 +233,22 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
           onMouseUp={handleMouseUp}
           onWheel={handleWheel}
           style={{
-            background: '#0c101c',
-            borderRadius: 12,
-            border: '1px solid #23304c',
+            background: '#f8fafc',
+            borderRadius: 16,
+            border: '1.5px solid var(--border-subtle)',
             overflow: 'hidden',
             position: 'relative',
             cursor: isDragging ? 'grabbing' : 'grab',
             userSelect: 'none',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           {loading && (
             <div style={{
               position: 'absolute', top: 20, left: 20, zIndex: 10,
-              background: 'rgba(15, 23, 42, 0.85)', padding: '6px 14px', borderRadius: 8,
-              fontSize: 12, color: '#06b6d4', border: '1px solid #06b6d4',
+              background: '#ffffff', padding: '8px 16px', borderRadius: 999,
+              fontSize: 12, fontWeight: 700, color: '#0284c7',
+              border: '1.5px solid #bae6fd', boxShadow: 'var(--shadow-sm)',
             }}>
               Loading Investigation Topology...
             </div>
@@ -251,25 +257,34 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
           {/* Graph Legend Overlay */}
           <div style={{
             position: 'absolute', bottom: 16, left: 16, zIndex: 10,
-            background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)',
-            padding: '10px 14px', borderRadius: 10, border: '1px solid #23304c',
-            display: 'flex', gap: 14, fontSize: 11,
+            background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(8px)',
+            padding: '10px 16px', borderRadius: 12, border: '1px solid #cbd5e1',
+            display: 'flex', gap: 14, fontSize: 11.5, boxShadow: 'var(--shadow-sm)',
+            flexWrap: 'wrap',
           }}>
             {Object.entries(ENTITY_CONFIG).slice(0, 5).map(([type, cfg]) => (
               <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: cfg.color }}></span>
-                <span style={{ color: '#94a3b8' }}>{cfg.label}</span>
+                <span style={{ color: '#475569', fontWeight: 600 }}>{cfg.label}</span>
               </div>
             ))}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, borderLeft: '1px solid #334155', paddingLeft: 10 }}>
-              <span style={{ width: 16, height: 2, background: '#6366f1' }}></span>
-              <span style={{ color: '#94a3b8' }}>Strong Edge</span>
-              <span style={{ width: 16, height: 2, borderTop: '2px dashed #64748b' }}></span>
-              <span style={{ color: '#94a3b8' }}>Weak Edge</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderLeft: '1px solid #e2e8f0', paddingLeft: 10 }}>
+              <span style={{ width: 16, height: 2, background: '#0284c7' }}></span>
+              <span style={{ color: '#64748b' }}>Strong</span>
+              <span style={{ width: 16, height: 2, borderTop: '2px dashed #94a3b8' }}></span>
+              <span style={{ color: '#64748b' }}>Corroborated</span>
             </div>
           </div>
 
           <svg width="100%" height="100%" style={{ width: '100%', height: '100%' }}>
+            {/* Subtle light background grid dots */}
+            <defs>
+              <pattern id="graph-dots" width="30" height="30" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1.2" fill="#cbd5e1" opacity="0.6" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#graph-dots)" />
+
             <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
               {/* Edges */}
               {filteredEdges.map(edge => {
@@ -285,19 +300,19 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
                     <line
                       x1={src.x} y1={src.y}
                       x2={tgt.x} y2={tgt.y}
-                      stroke={isSelected ? '#38bdf8' : isStrong ? '#6366f1' : '#475569'}
-                      strokeWidth={isSelected ? 3.5 : isStrong ? 2.5 : 1.5}
+                      stroke={isSelected ? '#0284c7' : isStrong ? '#0284c7' : '#94a3b8'}
+                      strokeWidth={isSelected ? 3.5 : isStrong ? 2.2 : 1.5}
                       strokeDasharray={isStrong ? 'none' : '4,4'}
-                      strokeOpacity={isSelected ? 1.0 : isStrong ? 0.75 : 0.45}
+                      strokeOpacity={isSelected ? 1.0 : isStrong ? 0.7 : 0.4}
                       style={{ cursor: 'pointer' }}
                     />
-                    {/* Edge Label text at midpoint */}
                     <text
                       x={(src.x + tgt.x) / 2}
                       y={(src.y + tgt.y) / 2 - 5}
-                      fill={isSelected ? '#38bdf8' : '#64748b'}
+                      fill={isSelected ? '#0284c7' : '#64748b'}
                       fontSize={10}
-                      fontFamily="JetBrains Mono, monospace"
+                      fontWeight="600"
+                      fontFamily="IBM Plex Mono, monospace"
                       textAnchor="middle"
                       style={{ cursor: 'pointer', userSelect: 'none' }}
                     >
@@ -310,7 +325,7 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
               {/* Nodes */}
               {filteredNodes.map(node => {
                 const pos = nodePositions[node.entity_id] || { x: 0, y: 0 };
-                const cfg = ENTITY_CONFIG[node.type] || { color: '#94a3b8', label: node.type, icon: '📍' };
+                const cfg = ENTITY_CONFIG[node.type] || { color: '#64748b', label: node.type, icon: '📍' };
                 const isSelected = selectedNode && selectedNode.entity_id === node.entity_id;
                 const r = node.type === 'domain' ? 24 : 18;
 
@@ -323,14 +338,14 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
                   >
                     {/* Outer glow ring if selected */}
                     {isSelected && (
-                      <circle r={r + 8} fill="none" stroke="#38bdf8" strokeWidth={2.5} strokeDasharray="3,3" opacity={0.9} />
+                      <circle r={r + 8} fill="none" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="3,3" opacity={0.9} />
                     )}
                     <circle
                       r={r}
                       fill={cfg.color}
-                      stroke="#0f172a"
+                      stroke="#ffffff"
                       strokeWidth={2.5}
-                      filter="drop-shadow(0 2px 4px rgba(0,0,0,0.5))"
+                      filter="drop-shadow(0 2px 5px rgba(0,0,0,0.15))"
                     />
                     <text
                       y={4}
@@ -344,11 +359,11 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
                     {/* Node value label */}
                     <text
                       y={r + 14}
-                      fill={isSelected ? '#38bdf8' : '#e2e8f0'}
-                      fontSize={11}
-                      fontWeight={isSelected ? '700' : '500'}
+                      fill={isSelected ? '#0284c7' : '#0f172a'}
+                      fontSize={11.5}
+                      fontWeight={isSelected ? '800' : '600'}
                       textAnchor="middle"
-                      fontFamily="JetBrains Mono, monospace"
+                      fontFamily="IBM Plex Mono, monospace"
                       style={{ pointerEvents: 'none' }}
                     >
                       {node.value.length > 20 ? node.value.slice(0, 18) + '...' : node.value}
@@ -363,56 +378,71 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
         {/* Inspector Panel */}
         {(selectedNode || selectedEdge) && (
           <div style={{
-            background: '#151d30',
-            borderRadius: 12,
-            border: '1px solid #23304c',
+            background: '#ffffff',
+            borderRadius: 16,
+            border: '1.5px solid var(--border-subtle)',
             padding: 20,
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
             gap: 16,
+            boxShadow: 'var(--shadow-sm)',
           }}>
             {/* Node Inspector */}
             {selectedNode && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{
-                    background: ENTITY_CONFIG[selectedNode.type]?.color || '#6366f1',
-                    color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                    background: ENTITY_CONFIG[selectedNode.type]?.color || '#0284c7',
+                    color: '#ffffff',
+                    padding: '3px 10px',
+                    borderRadius: 999,
+                    fontSize: 11,
+                    fontWeight: 700,
                   }}>
                     {selectedNode.type.toUpperCase()}
                   </span>
                   <button
                     onClick={() => setSelectedNode(null)}
-                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 18 }}
+                    style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18 }}
                   >
                     ✕
                   </button>
                 </div>
 
                 <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, wordBreak: 'break-all', fontFamily: 'JetBrains Mono' }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, wordBreak: 'break-all', fontFamily: 'IBM Plex Mono', color: '#0f172a' }}>
                     {selectedNode.value}
                   </h3>
-                  <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>ID: {selectedNode.entity_id}</p>
+                  <p style={{ fontSize: 12, color: '#64748b', marginTop: 4, fontFamily: 'IBM Plex Mono' }}>
+                    ID: {selectedNode.entity_id}
+                  </p>
                 </div>
 
                 {selectedNode.type === 'domain' && onSelectDomain && (
                   <button
                     onClick={() => onSelectDomain(selectedNode.value)}
                     style={{
-                      background: 'linear-gradient(135deg, #4f46e5, #06b6d4)',
-                      border: 'none', color: '#fff', padding: '8px 14px', borderRadius: 8,
-                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #0284c7, #0ea5e9)',
+                      border: 'none',
+                      color: '#ffffff',
+                      padding: '9px 16px',
+                      borderRadius: 999,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 3px 10px rgba(2, 132, 199, 0.28)',
                     }}
                   >
                     Scan This Domain →
                   </button>
                 )}
 
-                <div style={{ borderTop: '1px solid #23304c', paddingTop: 12 }}>
-                  <h4 style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>Timestamps</h4>
-                  <div style={{ fontSize: 12, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+                  <h4 style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                    Timestamps
+                  </h4>
+                  <div style={{ fontSize: 12, color: '#334155', display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div><strong>First Seen:</strong> {new Date(selectedNode.first_seen).toLocaleString()}</div>
                     <div><strong>Last Seen:</strong> {new Date(selectedNode.last_seen).toLocaleString()}</div>
                     <div><strong>Associated Scans:</strong> {selectedNode.scan_ids?.length || 0}</div>
@@ -420,11 +450,19 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
                 </div>
 
                 {selectedNode.metadata && Object.keys(selectedNode.metadata).length > 0 && (
-                  <div style={{ borderTop: '1px solid #23304c', paddingTop: 12 }}>
-                    <h4 style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>Entity Metadata</h4>
+                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+                    <h4 style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                      Entity Metadata
+                    </h4>
                     <pre style={{
-                      background: '#0a0d14', padding: 10, borderRadius: 8, fontSize: 11,
-                      color: '#06b6d4', overflowX: 'auto',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      padding: 10,
+                      borderRadius: 8,
+                      fontSize: 11,
+                      color: '#0369a1',
+                      overflowX: 'auto',
+                      fontFamily: 'IBM Plex Mono',
                     }}>
                       {JSON.stringify(selectedNode.metadata, null, 2)}
                     </pre>
@@ -438,63 +476,71 @@ export default function InvestigationGraph({ scanId, targetDomain, onSelectDomai
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{
-                    background: '#6366f1', color: '#fff', padding: '3px 10px',
-                    borderRadius: 6, fontSize: 11, fontWeight: 700,
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    padding: '3px 10px',
+                    borderRadius: 999,
+                    fontSize: 11,
+                    fontWeight: 700,
                   }}>
                     RELATIONSHIP
                   </span>
                   <button
                     onClick={() => setSelectedEdge(null)}
-                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 18 }}
+                    style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18 }}
                   >
                     ✕
                   </button>
                 </div>
 
                 <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: '#38bdf8' }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0284c7', fontFamily: 'IBM Plex Mono' }}>
                     {selectedEdge.type}
                   </h3>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2, fontFamily: 'IBM Plex Mono' }}>
                     <div><strong>Source:</strong> {selectedEdge.source_entity_id}</div>
                     <div><strong>Target:</strong> {selectedEdge.target_entity_id}</div>
                   </div>
                 </div>
 
-                <div style={{ borderTop: '1px solid #23304c', paddingTop: 12 }}>
-                  <h4 style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>Association Strength</h4>
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+                  <h4 style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                    Association Strength
+                  </h4>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ flex: 1, height: 8, background: '#0a0d14', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: 8, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
                       <div style={{
                         width: `${(selectedEdge.confidence || 1.0) * 100}%`,
                         height: '100%',
-                        background: (selectedEdge.confidence || 1.0) >= 0.7 ? '#10b981' : '#f59e0b',
+                        background: (selectedEdge.confidence || 1.0) >= 0.7 ? '#059669' : '#d97706',
                       }} />
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
                       {Math.round((selectedEdge.confidence || 1.0) * 100)}%
                     </span>
                   </div>
-                  <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                  <p style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
                     {(selectedEdge.confidence || 1.0) >= 0.7 ? 'Strong Direct Technical Link' : 'Corroborated Association'}
                   </p>
                 </div>
 
                 {selectedEdge.metadata && Object.keys(selectedEdge.metadata).length > 0 && (
-                  <div style={{ borderTop: '1px solid #23304c', paddingTop: 12 }}>
-                    <h4 style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>Supporting Evidence</h4>
-                    <div style={{ background: '#0a0d14', padding: 10, borderRadius: 8, fontSize: 12, color: '#e2e8f0' }}>
+                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+                    <h4 style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                      Supporting Evidence
+                    </h4>
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 8, fontSize: 12, color: '#334155' }}>
                       {selectedEdge.metadata.explanation && (
-                        <p style={{ marginBottom: 8, color: '#38bdf8' }}>{selectedEdge.metadata.explanation}</p>
+                        <p style={{ marginBottom: 8, color: '#0284c7', fontWeight: 600 }}>{selectedEdge.metadata.explanation}</p>
                       )}
-                      <pre style={{ fontSize: 11, color: '#94a3b8', overflowX: 'auto' }}>
+                      <pre style={{ fontSize: 11, color: '#0369a1', overflowX: 'auto', fontFamily: 'IBM Plex Mono' }}>
                         {JSON.stringify(selectedEdge.metadata, null, 2)}
                       </pre>
                     </div>
                   </div>
                 )}
 
-                <div style={{ borderTop: '1px solid #23304c', paddingTop: 12, fontSize: 11, color: '#64748b' }}>
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12, fontSize: 11, color: '#94a3b8' }}>
                   Observed at: {new Date(selectedEdge.created_at).toLocaleString()}
                 </div>
               </>
