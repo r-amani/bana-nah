@@ -4,6 +4,7 @@
 > **Computer 1 Role:** Backend Architect & Integration Lead (Phase 1–3 Complete)  
 > **Computer 2 Role:** Threat Detection, Security Assessment & Risk Engine Lead (Phase 4–5 Complete)  
 > **Repository Branch:** `develop`  
+> **Latest Commit Hash:** `2b88d46`  
 > **Date:** 2026-11-07  
 
 ---
@@ -149,9 +150,32 @@ phantom/
 
 ---
 
-## 3. Test Suite Verification
+## 3. Files Created or Modified by Computer 2
 
-All 32 tests executed and passed:
+| File Path | Action | Description |
+|---|---|---|
+| `backend/app/scanner/modules/url_detection.py` | Created | URL lexical heuristics, typosquatting & DNS analysis |
+| `backend/app/scanner/modules/tls_validation.py` | Created | TLS certificate validation & cryptography checks |
+| `backend/app/scanner/modules/security_assessment.py` | Created | Security headers audit & DOM analysis |
+| `backend/app/scanner/modules/risk_scoring.py` | Created | Explainable risk scoring engine |
+| `backend/app/scanner/modules/__init__.py` | Modified | Exported all new modules |
+| `backend/app/main.py` | Modified | Registered all 4 detection/risk modules |
+| `backend/app/scanner/orchestrator.py` | Modified | Linked aggregated findings into `risk_scoring` |
+| `backend/tests/test_url_detection.py` | Created | 7 unit tests for URL heuristics, typosquatting & DNS |
+| `backend/tests/test_tls_validation.py` | Created | 4 unit tests for TLS certificate validation |
+| `backend/tests/test_security_assessment.py` | Created | 5 unit tests for headers & DOM analysis |
+| `backend/tests/test_risk_scoring.py` | Created | 4 unit tests for explainable risk scoring |
+| `backend/tests/test_orchestrator.py` | Modified | Added 5-module orchestrator registration test |
+| `PHANTOM_WORK_DONE.md` | Modified | Handover and engineering progress documentation |
+
+---
+
+## 4. Test Suite Verification & Results
+
+- **Test Framework**: `pytest 9.2.0` with `anyio 4.16.0`
+- **Total Tests**: 32
+- **Passed**: 32 (100% pass rate)
+- **Execution Time**: ~1.7 seconds
 
 ```
 tests/test_models.py .............. 4 passed
@@ -166,7 +190,14 @@ tests/test_url_validator.py ....... 5 passed
 
 ---
 
-## 4. Handover for Computer 3 (Intelligence & Graph Modules)
+## 5. Outstanding Issues
+
+- **None**: All 32 unit and integration tests pass cleanly without errors.
+- **Dependencies**: `pytest` was installed in `backend/venv` for the test runner. Production requirements remain pinned in `requirements.txt`.
+
+---
+
+## 6. Handover for Computer 3 (Intelligence & Graph Modules)
 
 Computer 3 is responsible for Phase 6 (Threat Intelligence & Investigation Graph):
 
