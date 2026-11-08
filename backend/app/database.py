@@ -16,7 +16,7 @@ async def connect_db() -> None:
     """Establish MongoDB connection and create indexes."""
     global _client, _db
     settings = get_settings()
-    logger.info("Connecting to MongoDB at %s", settings.mongodb_uri)
+    logger.info("Connecting to MongoDB....")
     _client = AsyncIOMotorClient(
         settings.mongodb_uri,
         serverSelectionTimeoutMS=5000,
