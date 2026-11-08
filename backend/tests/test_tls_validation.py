@@ -277,3 +277,76 @@ async def test_tls_module_execute_http_scheme():
         assert "findings" in result
         assert any(f["title"] == "Plain HTTP Scheme Specified" for f in result["findings"])
         assert any(f["title"] == "TLS/HTTPS Connection Failed" for f in result["findings"])
+
+
+def test_tls_brand_impersonation_detection():
+    mod = TlsValidationModule()
+    der_bytes = generate_test_cert("red-whatsapp.com", ["red-whatsapp.com"], days_valid=90, self_signed=False, issuer_org="Let's Encrypt")
+
+    findings = []
+    entities = []
+    relationships = []
+
+    with patch("socket.create_connection") as mock_conn:
+        mock_sock = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_sock
+        with patch("ssl.create_default_context") as mock_ctx:
+            mock_ssock = MagicMock()
+            mock_ssock.getpeercert.return_value = der_bytes
+            mock_ssock.version.return_value = "TLSv1.3"
+            mock_ssock.cipher.return_value = ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
+            mock_ctx.return_value.wrap_socket.return_value.__enter__.return_value = mock_ssock
+
+            res = mod._fetch_and_parse_cert("red-whatsapp.com", 443, "scan-impersonate-1", findings, entities, relationships)
+
+            # Impersonation detection
+            assert res["domain_impersonation"]["brand_detected"] == "whatsapp"
+            assert res["domain_impersonation"]["is_official_domain"] is False
+            assert "disclaimer" in res["domain_impersonation"]
+            assert any("Potential Brand Impersonation" in f["title"] for f in findings)
+
+
+def test_tls_security_assessment_seven_dimensions_and_summary():
+    mod = TlsValidationModule()
+    der_bytes = generate_test_cert("secure.portal.org", ["secure.portal.org"], days_valid=90, self_signed=False, issuer_org="DigiCert Inc")
+
+    findings = []
+    entities = []
+    relationships = []
+
+    with patch("socket.create_connection") as mock_conn:
+        mock_sock = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_sock
+        with patch("ssl.create_default_context") as mock_ctx:
+            mock_ssock = MagicMock()
+            mock_ssock.getpeercert.return_value = der_bytes
+            mock_ssock.version.return_value = "TLSv1.3"
+            mock_ssock.cipher.return_value = ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
+            mock_ctx.return_value.wrap_socket.return_value.__enter__.return_value = mock_ssock
+
+            res = mod._fetch_and_parse_cert("secure.portal.org", 443, "scan-dims-1", findings, entities, relationships)
+
+            # 7-dimension security assessment verification
+            dims = res["security_assessment_dimensions"]
+            assert len(dims) == 7
+            dim_ids = [d["id"] for d in dims]
+            assert "validity" in dim_ids
+            assert "chain_trust" in dim_ids
+            assert "domain_matching" in dim_ids
+            assert "cryptography" in dim_ids
+            assert "expiration_risk" in dim_ids
+            assert "transparency" in dim_ids
+            assert "anomalies" in dim_ids
+
+            # Investigation summary 3 dimensions
+            summary = res["investigation_summary"]
+            assert "certificate_health" in summary
+            assert "domain_identity" in summary
+            assert "website_trust" in summary
+            assert summary["certificate_health"]["status"] == "Healthy"
+            assert summary["domain_identity"]["status"] == "Aligned"
+
+            # Cryptographic details
+            assert res["cryptography"]["public_key_algorithm"] == "RSA"
+            assert res["cryptography"]["public_key_size"] == 2048
+

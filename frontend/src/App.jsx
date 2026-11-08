@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navigation from './components/Navigation.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ScannerHome from './components/ScannerHome.jsx';
@@ -13,6 +13,25 @@ export default function App() {
   const [activePage, setActivePage] = useState('scanner');
   const [currentScan, setCurrentScan] = useState(null);
   const [targetDomain, setTargetDomain] = useState('');
+
+  // Auto-hydrate latest scan if available so detail views are not empty on reload
+  useEffect(() => {
+    async function loadLatestScan() {
+      try {
+        const res = await fetch('/api/scans?limit=1');
+        if (res.ok) {
+          const list = await res.json();
+          if (list && list.length > 0 && !currentScan) {
+            setCurrentScan(list[0]);
+            setTargetDomain(list[0].hostname || '');
+          }
+        }
+      } catch (err) {
+        // Degrades silently
+      }
+    }
+    loadLatestScan();
+  }, []);
 
   function handleScanComplete(scan) {
     setCurrentScan(scan);
