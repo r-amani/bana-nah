@@ -71,6 +71,7 @@ export default function CertificateDetails({ scan, onNavigate }) {
 
   let statusBadge = { label: 'Valid & Trusted', bg: '#ecfdf5', color: '#059669', border: '#a7f3d0', icon: '✓' };
   if (isUnavailable) statusBadge = { label: 'TLS Handshake Failed / Port 443 Unavailable', bg: '#fff1f2', color: '#e11d48', border: '#fecdd3', icon: '✕' };
+  else if (tlsData.is_unverified_fallback) statusBadge = { label: 'Unverified Certificate (Handshake Failed)', bg: '#fffbeb', color: '#d97706', border: '#fde68a', icon: '⚠️' };
   else if (isExpired) statusBadge = { label: 'Expired Certificate', bg: '#fff1f2', color: '#e11d48', border: '#fecdd3', icon: '⚠️' };
   else if (hostnameMatches === false) statusBadge = { label: 'Domain Mismatch', bg: '#fff1f2', color: '#e11d48', border: '#fecdd3', icon: '⚠️' };
   else if (isSelfSigned) statusBadge = { label: 'Self-Signed (Untrusted Root)', bg: '#fffbeb', color: '#d97706', border: '#fde68a', icon: '⚠️' };
@@ -134,12 +135,21 @@ export default function CertificateDetails({ scan, onNavigate }) {
           <span><strong>Analytical Principle:</strong> Do not confuse certificate validity with website legitimacy. Attackers frequently issue valid TLS certificates from public Certificate Authorities on dedicated phishing infrastructure.</span>
         </div>
 
+        {tlsData.is_unverified_fallback && (
+          <div style={{ marginTop: 14, background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 12, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: '#92400e' }}>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <div>
+              <strong>UNVERIFIED RAW CERTIFICATE:</strong> This metadata was extracted via an unverified forensic probe because standard TLS verification failed ({tlsData.chain_error || 'untrusted authority or invalid chain'}). Standard TLS trust handshake did not succeed.
+            </div>
+          </div>
+        )}
+
         {/* Metrics Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 20 }}>
-          <MetricBox label="Certificate Authority" value={issuerObj.ca_name || issuerDisplay} />
-          <MetricBox label="Certificate Type" value={tlsData.certificate_type || 'Domain Validated (DV)'} color="#0284c7" />
-          <MetricBox label="Protocol & Version" value={tlsData.tls_version || 'TLSv1.3'} mono />
-          <MetricBox label="Expiration Timeline" value={daysRemaining !== null && daysRemaining !== undefined ? `${daysRemaining} days left` : 'N/A'} color={(daysRemaining ?? 0) <= 0 ? '#e11d48' : (daysRemaining ?? 0) <= 14 ? '#d97706' : '#059669'} />
+          <MetricBox label="Certificate Authority" value={isUnavailable ? 'N/A' : (issuerObj.ca_name || issuerDisplay)} />
+          <MetricBox label="Certificate Type" value={isUnavailable ? 'N/A' : (tlsData.certificate_type || 'N/A')} color={tlsData.is_unverified_fallback ? '#d97706' : '#0284c7'} />
+          <MetricBox label="Protocol & Version" value={isUnavailable ? 'N/A' : (tlsData.tls_version || tlsData.tls_protocol || 'N/A')} mono />
+          <MetricBox label="Expiration Timeline" value={isUnavailable || daysRemaining === null || daysRemaining === undefined ? 'N/A' : `${daysRemaining} days left`} color={(daysRemaining ?? 0) <= 0 ? '#e11d48' : (daysRemaining ?? 0) <= 14 ? '#d97706' : '#059669'} />
         </div>
       </Card>
 
@@ -161,26 +171,26 @@ export default function CertificateDetails({ scan, onNavigate }) {
             <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>Subject Information</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-            <InfoRow label="Common Name (CN)" value={commonNameDisplay} mono isStrong />
-            <InfoRow label="Organization (O)" value={subjectObj.organization || 'Not Specified (DV)'} isStrong />
-            <InfoRow label="Organizational Unit (OU)" value={subjectObj.organizational_unit || 'None'} />
-            <InfoRow label="Country (C)" value={subjectObj.country || 'N/A'} isStrong />
+            <InfoRow label="Common Name (CN)" value={isUnavailable ? 'N/A' : commonNameDisplay} mono isStrong />
+            <InfoRow label="Organization (O)" value={isUnavailable ? 'N/A' : (subjectObj.organization || 'Not Specified (DV)')} isStrong />
+            <InfoRow label="Organizational Unit (OU)" value={isUnavailable ? 'N/A' : (subjectObj.organizational_unit || 'None')} />
+            <InfoRow label="Country (C)" value={isUnavailable ? 'N/A' : (subjectObj.country || 'N/A')} isStrong />
             <div style={{ marginTop: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ color: '#64748b', fontWeight: 600 }}>Subject Alternative Names ({sansList.length}):</span>
-                {sansList.length > 5 && (
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Subject Alternative Names ({isUnavailable ? 0 : sansList.length}):</span>
+                {sansList.length > 5 && !isUnavailable && (
                   <input type="text" placeholder="Filter SANs..." value={sanSearch} onChange={e => setSanSearch(e.target.value)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: '1px solid #cbd5e1', outline: 'none' }} />
                 )}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 110, overflowY: 'auto' }}>
-                {filteredSans.length > 0 ? (
+                {!isUnavailable && filteredSans.length > 0 ? (
                   filteredSans.map((san, idx) => (
                     <span key={idx} style={{ background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontFamily: 'IBM Plex Mono' }}>
                       {san}
                     </span>
                   ))
                 ) : (
-                  <span style={{ color: '#94a3b8', fontSize: 12 }}>No matching SANs recorded</span>
+                  <span style={{ color: '#94a3b8', fontSize: 12 }}>{isUnavailable ? 'Port 443 unavailable — no SANs retrieved' : 'No matching SANs recorded'}</span>
                 )}
               </div>
             </div>
@@ -194,11 +204,11 @@ export default function CertificateDetails({ scan, onNavigate }) {
             <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>Issuer & Authority</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-            <InfoRow label="Certificate Authority" value={issuerObj.ca_name || issuerDisplay} color="#0284c7" isStrong />
-            <InfoRow label="Issuer Common Name" value={issuerObj.common_name || 'N/A'} mono isStrong />
-            <InfoRow label="Issuer Organization" value={issuerObj.organization || issuerDisplay} isStrong />
-            <InfoRow label="Issuer Country" value={issuerObj.country || 'US'} />
-            <InfoRow label="Trust Anchor Status" value={chainValid && !isSelfSigned ? '✓ Public System Trust Store' : isSelfSigned ? '⚠️ Self-Signed (Untrusted)' : '⚠️ Untrusted Chain'} color={chainValid && !isSelfSigned ? '#059669' : '#e11d48'} isStrong />
+            <InfoRow label="Certificate Authority" value={isUnavailable ? 'N/A' : (issuerObj.ca_name || issuerDisplay)} color="#0284c7" isStrong />
+            <InfoRow label="Issuer Common Name" value={isUnavailable ? 'N/A' : (issuerObj.common_name || 'N/A')} mono isStrong />
+            <InfoRow label="Issuer Organization" value={isUnavailable ? 'N/A' : (issuerObj.organization || issuerDisplay)} isStrong />
+            <InfoRow label="Issuer Country" value={isUnavailable ? 'N/A' : (issuerObj.country || 'N/A')} />
+            <InfoRow label="Trust Anchor Status" value={isUnavailable ? 'N/A (Port 443 Offline)' : (chainValid && !isSelfSigned ? '✓ Public System Trust Store' : isSelfSigned ? '⚠️ Self-Signed (Untrusted)' : '⚠️ Untrusted Chain')} color={isUnavailable ? '#64748b' : (chainValid && !isSelfSigned ? '#059669' : '#e11d48')} isStrong />
           </div>
         </SubCard>
 
@@ -211,26 +221,26 @@ export default function CertificateDetails({ scan, onNavigate }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 16 }}>
             <div>
               <span style={{ color: '#64748b', fontSize: 11, textTransform: 'uppercase', fontWeight: 700 }}>Issued (notBefore)</span>
-              <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 3 }}>{notBeforeStr}</div>
+              <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 3 }}>{isUnavailable ? 'N/A' : notBeforeStr}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <span style={{ color: '#64748b', fontSize: 11, textTransform: 'uppercase', fontWeight: 700 }}>Lifespan Status</span>
-              <div style={{ fontWeight: 800, color: isExpired ? '#e11d48' : '#0284c7', marginTop: 3 }}>
-                {isExpired ? 'EXPIRED' : `${daysRemaining ?? 'N/A'} days left`}
+              <div style={{ fontWeight: 800, color: isUnavailable ? '#64748b' : isExpired ? '#e11d48' : '#0284c7', marginTop: 3 }}>
+                {isUnavailable ? 'N/A' : isExpired ? 'EXPIRED' : `${daysRemaining ?? 'N/A'} days left`}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <span style={{ color: '#64748b', fontSize: 11, textTransform: 'uppercase', fontWeight: 700 }}>Expires (notAfter)</span>
-              <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 3 }}>{notAfterStr}</div>
+              <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 3 }}>{isUnavailable ? 'N/A' : notAfterStr}</div>
             </div>
           </div>
           <div>
             <div style={{ height: 8, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden' }}>
-              <div style={{ width: `${progressPct}%`, height: '100%', background: isExpired ? '#e11d48' : progressPct > 80 ? '#d97706' : '#0284c7', transition: 'width 0.4s ease' }} />
+              <div style={{ width: `${isUnavailable ? 0 : progressPct}%`, height: '100%', background: isExpired ? '#e11d48' : progressPct > 80 ? '#d97706' : '#0284c7', transition: 'width 0.4s ease' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#64748b', marginTop: 6 }}>
               <span>Issued</span>
-              <span>Currently Valid ({progressPct}% elapsed)</span>
+              <span>{isUnavailable ? 'Unavailable / Offline' : `Currently Valid (${progressPct}% elapsed)`}</span>
               <span>Expiration</span>
             </div>
           </div>
@@ -249,10 +259,10 @@ export default function CertificateDetails({ scan, onNavigate }) {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, fontSize: 12.5 }}>
-            <MetricBox label="Public Key" value={`${cryptoObj.public_key_algorithm || 'RSA'} (${cryptoObj.public_key_size || 2048}-bit)`} />
-            <MetricBox label="Cipher Suite" value={tlsData.cipher_suite || 'AES_256_GCM'} mono />
-            <MetricBox label="Signature Algorithm" value={cryptoObj.signature_algorithm || tlsData.signature_algorithm || 'sha256WithRSAEncryption'} />
-            <MetricBox label="Serial Number" value={tlsData.serial_number || 'N/A'} mono />
+            <MetricBox label="Public Key" value={isUnavailable ? 'N/A' : (cryptoObj.public_key_algorithm ? `${cryptoObj.public_key_algorithm} (${cryptoObj.public_key_size || 'N/A'}-bit)` : 'N/A')} />
+            <MetricBox label="Cipher Suite" value={isUnavailable ? 'N/A' : (tlsData.cipher_suite || 'N/A')} mono />
+            <MetricBox label="Signature Algorithm" value={isUnavailable ? 'N/A' : (cryptoObj.signature_algorithm || tlsData.signature_algorithm || 'N/A')} />
+            <MetricBox label="Serial Number" value={isUnavailable ? 'N/A' : (tlsData.serial_number || 'N/A')} mono />
           </div>
 
           {/* SHA-256 Fingerprint */}

@@ -92,7 +92,7 @@ class TlsValidationModule(ModuleInterface):
             return None, None, None
 
     def _fetch_and_parse_cert(self, hostname: str, port: int, scan_id: str, findings: list, entities: list, relationships: list) -> dict:
-        raw_der, negotiated_protocol, cipher_info, chain_valid, chain_error = None, None, None, False, None
+        raw_der, negotiated_protocol, cipher_info, chain_valid, chain_error, is_unverified_fallback = None, None, None, False, None, False
 
         # Stage 1: Verified connection probe
         try:
@@ -103,37 +103,54 @@ class TlsValidationModule(ModuleInterface):
         except ssl.SSLCertVerificationError as e:
             chain_error = getattr(e, "verify_message", None) or str(e)
             raw_der, negotiated_protocol, cipher_info = self._probe_unverified_cert(hostname, port)
+            is_unverified_fallback = True
         except ssl.SSLError as e:
             chain_error = str(e)
             raw_der, negotiated_protocol, cipher_info = self._probe_unverified_cert(hostname, port)
+            is_unverified_fallback = True
         except (socket.timeout, TimeoutError, ConnectionRefusedError, OSError) as e:
             logger.warning("TLS connection failed for %s:%d: %s", hostname, port, e)
             _add_finding(
                 findings, scan_id, "TLS/HTTPS Connection Failed",
                 f"Could not establish a TLS handshake with {hostname}:{port} ({type(e).__name__}: {str(e)}).",
-                Severity.HIGH, 0.95, {"hostname": hostname, "port": port, "error": str(e)},
+                Severity.INFO, 0.95, {"hostname": hostname, "port": port, "error": str(e)},
                 "Ensure an active, valid TLS certificate is deployed on port 443."
             )
-            return {"status": "unavailable", "error": str(e), "chain_valid": False, "is_expired": None, "is_self_signed": None, "hostname_matches": False}
+            return {
+                "status": "unavailable", "error": str(e), "chain_valid": False, "is_expired": None,
+                "is_self_signed": None, "hostname_matches": False, "certificate_type": None,
+                "tls_version": None, "tls_protocol": None, "cipher": None, "cipher_suite": None,
+                "is_unverified_fallback": False
+            }
         except Exception as e:
             logger.warning("Unexpected TLS error for %s:%d: %s", hostname, port, e)
             _add_finding(
                 findings, scan_id, "TLS/HTTPS Connection Failed",
                 f"Could not establish a TLS handshake with {hostname}:{port} ({type(e).__name__}: {str(e)}).",
-                Severity.HIGH, 0.95, {"hostname": hostname, "port": port, "error": str(e)},
+                Severity.INFO, 0.95, {"hostname": hostname, "port": port, "error": str(e)},
                 "Ensure an active, valid TLS certificate is deployed on port 443."
             )
-            return {"status": "unavailable", "error": str(e), "chain_valid": False, "is_expired": None, "is_self_signed": None, "hostname_matches": False}
+            return {
+                "status": "unavailable", "error": str(e), "chain_valid": False, "is_expired": None,
+                "is_self_signed": None, "hostname_matches": False, "certificate_type": None,
+                "tls_version": None, "tls_protocol": None, "cipher": None, "cipher_suite": None,
+                "is_unverified_fallback": False
+            }
 
         if not raw_der:
             err_msg = chain_error or "No certificate received from host"
             _add_finding(
                 findings, scan_id, "TLS/HTTPS Connection Failed",
                 f"Could not retrieve TLS certificate from {hostname}:{port} ({err_msg}).",
-                Severity.HIGH, 0.95, {"hostname": hostname, "port": port, "error": err_msg},
+                Severity.INFO, 0.95, {"hostname": hostname, "port": port, "error": err_msg},
                 "Ensure an active, valid TLS certificate is deployed on port 443."
             )
-            return {"status": "failed", "error": err_msg, "chain_valid": False, "is_expired": None, "is_self_signed": None, "hostname_matches": False}
+            return {
+                "status": "failed", "error": err_msg, "chain_valid": False, "is_expired": None,
+                "is_self_signed": None, "hostname_matches": False, "certificate_type": None,
+                "tls_version": None, "tls_protocol": None, "cipher": None, "cipher_suite": None,
+                "is_unverified_fallback": False
+            }
 
         try:
             cert = x509.load_der_x509_certificate(raw_der)
@@ -173,7 +190,8 @@ class TlsValidationModule(ModuleInterface):
         sig_algo_full = getattr(cert.signature_algorithm_oid, "_name", None) or sig_algo
 
         is_wildcard = (subj_cn and subj_cn.startswith("*.")) or any(s.startswith("*.") for s in sans)
-        cert_type = "Wildcard (DV)" if is_wildcard else ("Organization Validated (OV)" if subj_org and subj_c else "Domain Validated (DV)")
+        base_cert_type = "Wildcard (DV)" if is_wildcard else ("Organization Validated (OV)" if subj_org and subj_c else "Domain Validated (DV)")
+        cert_type = f"{base_cert_type} (UNVERIFIED)" if is_unverified_fallback else base_cert_type
 
         # SCT presence
         has_embedded_scts, sct_count = False, 0
@@ -209,6 +227,14 @@ class TlsValidationModule(ModuleInterface):
         matched_hostname = self._match_hostname(hostname, subj_cn, sans)
         if not matched_hostname:
             _add_finding(findings, scan_id, "TLS Hostname Mismatch", f"Domain '{hostname}' does not match Common Name ({subj_cn}) or SANs ({', '.join(sans[:5])}).", Severity.CRITICAL, 0.95, {"hostname": hostname, "common_name": subj_cn, "sans": sans}, "Issue a certificate covering the target domain or update DNS routing.")
+
+        if is_unverified_fallback:
+            _add_finding(
+                findings, scan_id, "Raw Certificate Retrieved via Unverified Forensic Fallback",
+                f"Standard TLS trust handshake with {hostname}:{port} failed ({chain_error or 'Untrusted authority or invalid chain'}). Host certificate was extracted via an unverified forensic probe for threat inspection.",
+                Severity.MEDIUM, 0.9, {"chain_error": chain_error, "unverified_fallback": True},
+                "Investigate why standard TLS validation failed and ensure a trusted certificate is installed."
+            )
 
         if sig_algo in ("md5", "sha1"):
             _add_finding(findings, scan_id, f"Weak Certificate Signature Algorithm ({sig_algo.upper()})", f"Certificate uses deprecated signature algorithm {sig_algo.upper()}, vulnerable to collision attacks.", Severity.HIGH, 1.0, {"signature_algorithm": sig_algo}, "Reissue certificate using SHA-256 or modern ECDSA algorithm.")
@@ -275,6 +301,14 @@ class TlsValidationModule(ModuleInterface):
             {"title": "Certificate Validity Period Status", "severity": "critical" if is_expired else "info", "evidence": f"Valid: {not_before.strftime('%Y-%m-%d')} to {not_after.strftime('%Y-%m-%d')} ({days_remaining}d left)", "interpretation": f"The certificate is within its operational lifespan ({days_remaining}d remaining)." if not (is_expired or is_not_yet_valid) else "Certificate outside valid operational period."},
         ]
 
+        if is_unverified_fallback:
+            investigation_findings.insert(0, {
+                "title": "Raw Certificate Retrieved via Unverified Forensic Fallback",
+                "severity": "high",
+                "evidence": f"Standard TLS verification failed ({chain_error or 'Verification error'}). Certificate metadata extracted without verification.",
+                "interpretation": "Host metadata was obtained via an unverified connection. This certificate is NOT trusted by the system trust store and cannot guarantee transport authenticity.",
+            })
+
         if matched_brand and not is_official_brand_domain:
             investigation_findings.append({
                 "title": f"Brand Keyword '{matched_brand.capitalize()}' Present in Domain",
@@ -294,7 +328,7 @@ class TlsValidationModule(ModuleInterface):
         web_trust_status = "Suspicious" if (matched_brand and not is_official_brand_domain) or is_untrusted_ca or is_self_signed else ("Neutral / Standard" if is_healthy else "Caution")
 
         investigation_summary = {
-            "certificate_health": {"status": cert_health_status, "title": "Certificate Health", "summary": "Technical certificate configuration, cryptographic parameters, and chain trust.", "details": f"Chain {'valid' if chain_valid else 'invalid'}, {pk_algo} {pk_size}b, {days_remaining} days remaining."},
+            "certificate_health": {"status": cert_health_status, "title": "Certificate Health", "summary": "Technical certificate configuration, cryptographic parameters, and chain trust." if not is_unverified_fallback else "Certificate extracted via unverified probe; standard TLS verification failed.", "details": f"Chain {'valid' if chain_valid else 'invalid'}, {pk_algo} {pk_size}b, {days_remaining} days remaining."},
             "domain_identity": {"status": domain_id_status, "title": "Domain Identity", "summary": "Alignment between certificate identity, SAN coverage, and target domain.", "details": f"Hostname {'matches' if matched_hostname else 'mismatched'} with {len(sans)} SANs covered."},
             "website_trust": {"status": web_trust_status, "title": "Website Trust", "summary": "Impersonation heuristics and brand mimicry indicators.", "details": f"Brand indicator flagged for '{matched_brand}'." if (matched_brand and not is_official_brand_domain) else "No brand impersonation keywords detected."},
         }
@@ -308,9 +342,10 @@ class TlsValidationModule(ModuleInterface):
             "issuer_details": {"common_name": iss_cn, "organization": iss_org, "organizational_unit": iss_ou, "country": iss_c, "ca_name": ca_name},
             "subject": {"common_name": subj_cn, "organization": subj_org, "organizational_unit": subj_ou, "country": subj_c},
             "subject_details": {"common_name": subj_cn, "organization": subj_org, "organizational_unit": subj_ou, "country": subj_c, "sans": sans},
-            "cryptography": {"tls_version": negotiated_protocol or "TLSv1.3", "cipher_suite": cipher_info[0] if cipher_info else "TLS_AES_256_GCM_SHA384", "public_key_algorithm": pk_algo, "public_key_size": pk_size, "signature_algorithm": sig_algo_full, "fingerprint_sha256": fingerprint},
+            "cryptography": {"tls_version": negotiated_protocol, "cipher_suite": cipher_info[0] if cipher_info else None, "public_key_algorithm": pk_algo, "public_key_size": pk_size, "signature_algorithm": sig_algo_full, "fingerprint_sha256": fingerprint, "unverified_fallback": is_unverified_fallback},
             "validity": {"not_before": not_before.isoformat(), "not_after": not_after.isoformat(), "days_remaining": days_remaining, "total_validity_days": total_validity_days, "progress_pct": progress_pct},
             "certificate_type": cert_type,
+            "is_unverified_fallback": is_unverified_fallback,
             "certificate_transparency": {"has_embedded_scts": has_embedded_scts, "sct_count": sct_count, "status": "Embedded SCTs Present" if has_embedded_scts else "No Embedded SCTs (Delivered via OCSP/TLS or unavailable)"},
             "domain_impersonation": {"brand_detected": matched_brand, "is_official_domain": is_official_brand_domain, "risk_level": impersonation_risk, "suspicious_affixes": suspicious_affix_found, "san_inconsistent": san_inconsistent, "is_punycode": is_punycode, "disclaimer": "A brand name appearing in a domain is an impersonation indicator, not confirmed malicious phishing."},
             "security_assessment_dimensions": dimensions, "investigation_findings": investigation_findings, "investigation_summary": investigation_summary,

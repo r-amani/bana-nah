@@ -159,7 +159,10 @@ def test_cert_inspection_untrusted_root():
                 assert res["chain_valid"] is False
                 assert res["is_self_signed"] is False
                 assert res["is_untrusted_ca"] is True
+                assert res["is_unverified_fallback"] is True
+                assert "(UNVERIFIED)" in res["certificate_type"]
                 assert any("Untrusted TLS Certificate Authority" in f["title"] for f in findings)
+                assert any("Raw Certificate Retrieved via Unverified Forensic Fallback" in f["title"] for f in findings)
 
 
 def test_cert_inspection_expired():
@@ -225,7 +228,28 @@ def test_connection_failure_and_timeout():
 
         assert res["status"] == "unavailable"
         assert res["chain_valid"] is False
-        assert any("TLS/HTTPS Connection Failed" in f["title"] for f in findings)
+        assert res["certificate_type"] is None
+        assert res["tls_version"] is None
+        assert res["is_unverified_fallback"] is False
+        fail_finding = next(f for f in findings if "TLS/HTTPS Connection Failed" in f["title"])
+        assert fail_finding["severity"] == "info"
+
+
+def test_port_443_unavailability_does_not_inflate_phishing_risk():
+    from app.scanner.modules.risk_scoring import calculate_explainable_risk
+
+    mod = TlsValidationModule()
+    findings = []
+    entities = []
+    relationships = []
+
+    with patch("socket.create_connection", side_effect=ConnectionRefusedError("Connection refused on port 443")):
+        mod._fetch_and_parse_cert("offline-server.org", 443, "scan-port443-down", findings, entities, relationships)
+
+    risk_result = calculate_explainable_risk(findings)
+    # Merely having port 443 closed must NOT produce a high or critical phishing risk score
+    assert risk_result["risk_level"] in ("none", "low")
+    assert risk_result["risk_score"] < 5.0
 
 
 def test_frontend_and_flight_recorder_contract_harmony():
