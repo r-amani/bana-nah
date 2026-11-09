@@ -30,6 +30,91 @@ const MetricBox = ({ label, value, color, mono, style = {} }) => (
   </div>
 );
 
+function getPlainEnglishVerdict(scan, tlsData, isUnavailable, daysRemaining) {
+  const isExpired = tlsData.is_expired;
+  const isSelfSigned = tlsData.is_self_signed;
+  const isUntrustedCa = tlsData.is_untrusted_ca || tlsData.chain_valid === false;
+  const hostnameMatches = tlsData.hostname_matches;
+  const isBrandDetected = tlsData.domain_impersonation?.brand_detected && !tlsData.domain_impersonation?.is_official_domain;
+  const brandName = tlsData.domain_impersonation?.brand_detected;
+
+  if (isUnavailable) {
+    return {
+      headline: 'Target Host Is Offline or Unreachable',
+      badgeText: 'Offline / Inactive Host',
+      badgeBg: '#f1f5f9', badgeColor: '#475569', badgeBorder: '#cbd5e1',
+      borderColor: '#94a3b8', cardBg: '#f8fafc', tagColor: '#64748b',
+      explanation: `When PHANTOM attempted to contact ${scan?.hostname || 'this domain'}, the server did not respond on port 443 (HTTPS) or failed DNS lookup (${tlsData.error || 'Connection refused or unresolvable name'}). No live website or digital certificate is currently available to users.`,
+      impact: 'You cannot open this website right now. Because the server is offline or unreachable, it cannot actively infect devices or steal credentials in its current state.',
+      action: 'No action needed. If you received this link in an email or SMS, ignore it as the link is non-functional or dead.',
+      actionColor: '#0369a1',
+    };
+  }
+
+  if (isBrandDetected) {
+    return {
+      headline: `High Caution: Suspected ${brandName ? brandName.toUpperCase() : 'Brand'} Lookalike`,
+      badgeText: 'Potential Phishing Lure',
+      badgeBg: '#fff1f2', badgeColor: '#e11d48', badgeBorder: '#fecdd3',
+      borderColor: '#e11d48', cardBg: '#fff5f5', tagColor: '#e11d48',
+      explanation: `This domain contains the brand name '${brandName ? brandName.toUpperCase() : 'protected brand'}', but is NOT verified as legitimate infrastructure owned by that company. Attackers frequently register lookalike names to trick visitors into giving up passwords.`,
+      impact: 'Interacting with this site puts your account credentials at risk. Fraudulent login forms may capture your username, password, or financial info.',
+      action: 'Do NOT enter your password or payment details. If you need to access this service, go directly to the official known website instead.',
+      actionColor: '#e11d48',
+    };
+  }
+
+  if (hostnameMatches === false) {
+    return {
+      headline: 'Domain Mismatch: Certificate Belongs to a Different Website',
+      badgeText: 'Certificate Mismatch',
+      badgeBg: '#fff1f2', badgeColor: '#e11d48', badgeBorder: '#fecdd3',
+      borderColor: '#e11d48', cardBg: '#fff5f5', tagColor: '#e11d48',
+      explanation: `The security certificate presented by this server was issued for a different domain name, not '${scan?.hostname}'. This usually happens when an attacker is intercepting traffic or a server administrator severely misconfigured their domain.`,
+      impact: 'Browsers will show a full-screen warning blocking access because it cannot confirm you reached the intended computer.',
+      action: 'Do not bypass browser warnings to view this site. The identity of the operator cannot be verified.',
+      actionColor: '#e11d48',
+    };
+  }
+
+  if (isExpired) {
+    return {
+      headline: 'Security Certificate Has Expired',
+      badgeText: 'Expired Certificate',
+      badgeBg: '#fff1f2', badgeColor: '#e11d48', badgeBorder: '#fecdd3',
+      borderColor: '#e11d48', cardBg: '#fff5f5', tagColor: '#e11d48',
+      explanation: `The cryptographic certificate securing this site expired ${Math.abs(daysRemaining || 0)} days ago. Without an active certificate, encrypted traffic is no longer guaranteed safe from eavesdropping or tampering.`,
+      impact: 'Modern web browsers will actively prevent you from connecting to prevent outdated encryption vulnerabilities.',
+      action: 'Avoid sending sensitive personal or payment information until the site owner renews their security certificate.',
+      actionColor: '#ea580c',
+    };
+  }
+
+  if (isSelfSigned || isUntrustedCa) {
+    return {
+      headline: 'Untrusted or Self-Made Security Certificate',
+      badgeText: 'Untrusted Root Authority',
+      badgeBg: '#fffbeb', badgeColor: '#d97706', badgeBorder: '#fde68a',
+      borderColor: '#d97706', cardBg: '#fffdf5', tagColor: '#d97706',
+      explanation: 'This website is using a self-signed or unauthorized certificate that has not been verified by a publicly trusted Certificate Authority (such as DigiCert, Let\'s Encrypt, or Google Trust Services).',
+      impact: 'Anyone on the same network or public Wi-Fi could potentially intercept or alter information sent to this site.',
+      action: 'Never enter credit card numbers or passwords on sites with self-signed or untrusted certificates.',
+      actionColor: '#d97706',
+    };
+  }
+
+  return {
+    headline: 'Active Website with Valid Encryption (Normal Parameters)',
+    badgeText: 'Encrypted & Active',
+    badgeBg: '#ecfdf5', badgeColor: '#059669', badgeBorder: '#a7f3d0',
+    borderColor: '#059669', cardBg: '#f6fdf9', tagColor: '#059669',
+    explanation: `This website possesses a valid, unexpired digital certificate issued by ${tlsData.issuer_details?.ca_name || tlsData.issuer || 'a trusted Certificate Authority'}. All data sent between your browser and this site is securely encrypted in transit.`,
+    impact: 'Eavesdroppers on your Wi-Fi cannot see passwords or data submitted to this host. Note: Encryption protects the connection, but does not guarantee the business behind it is trustworthy.',
+    action: 'Safe to browse with standard awareness. Always verify who you are dealing with before making purchases or sharing personal documents.',
+    actionColor: '#059669',
+  };
+}
+
 export default function CertificateDetails({ scan, onNavigate }) {
   const [copiedFingerprint, setCopiedFingerprint] = useState(false);
   const [showRawDetails, setShowRawDetails] = useState(false);
@@ -104,6 +189,8 @@ export default function CertificateDetails({ scan, onNavigate }) {
       : 50
   );
 
+  const verdict = getPlainEnglishVerdict(scan, tlsData, isUnavailable, daysRemaining);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1120, margin: '0 auto', paddingBottom: 48 }}>
       {/* SECTION A: Overview */}
@@ -153,14 +240,40 @@ export default function CertificateDetails({ scan, onNavigate }) {
         </div>
       </Card>
 
-      {isUnavailable && (
-        <div style={{ background: '#fff1f2', border: '1.5px solid #fecdd3', borderRadius: 16, padding: '20px 24px', color: '#9f1239' }}>
-          <h4 style={{ fontSize: 15, fontWeight: 800 }}>⚠️ TLS Inspection Offline or Handshake Incomplete</h4>
-          <p style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
-            PHANTOM could not establish a TLS handshake on port 443 for <strong>{scan.hostname}</strong> ({tlsData.error || 'Connection refused or timed out'}).
-          </p>
+      {/* SECTION: Layman-Friendly Executive Verdict & Real-World Meaning */}
+      <div style={{ background: verdict.cardBg, border: '1.5px solid var(--border-subtle)', borderLeft: `6px solid ${verdict.borderColor}`, borderRadius: 20, padding: '24px 28px', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>💡</span>
+              <span style={{ fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: verdict.tagColor }}>
+                Plain-English Verdict & Real-World Conclusion
+              </span>
+            </div>
+            <h3 style={{ fontSize: 19, fontWeight: 800, color: '#0f172a', marginTop: 6 }}>
+              {verdict.headline}
+            </h3>
+          </div>
+          <span style={{ padding: '4px 14px', borderRadius: 999, fontSize: 12, fontWeight: 800, background: verdict.badgeBg, color: verdict.badgeColor, border: `1px solid ${verdict.badgeBorder}`, fontFamily: 'IBM Plex Mono' }}>
+            {verdict.badgeText}
+          </span>
         </div>
-      )}
+
+        <p style={{ fontSize: 13.5, color: '#334155', marginTop: 12, lineHeight: 1.6, fontWeight: 500 }}>
+          {verdict.explanation}
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginTop: 16 }}>
+          <div style={{ background: '#ffffff', padding: '14px 18px', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em' }}>🌐 What this means for visitors</span>
+            <p style={{ fontSize: 12.5, color: '#0f172a', marginTop: 5, lineHeight: 1.5, margin: '4px 0 0' }}>{verdict.impact}</p>
+          </div>
+          <div style={{ background: '#ffffff', padding: '14px 18px', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em' }}>🛡️ Recommended Action</span>
+            <p style={{ fontSize: 12.5, color: verdict.actionColor, marginTop: 5, lineHeight: 1.5, margin: '4px 0 0', fontWeight: 600 }}>{verdict.action}</p>
+          </div>
+        </div>
+      </div>
 
       {/* SECTION B: Detailed Technical Sections */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: 20 }}>
@@ -444,23 +557,29 @@ export default function CertificateDetails({ scan, onNavigate }) {
             { key: 'website_trust', num: 3, title: 'Website Trust', defSummary: 'Impersonation heuristics and brand mimicry indicators.', okStatus: 'Neutral / Standard' },
           ].map(dim => {
             const dimObj = summaryObj[dim.key] || {};
-            const isOk = dimObj.status === dim.okStatus;
+            const isOk = !isUnavailable && dimObj.status === dim.okStatus;
+            const isNeutral = isUnavailable || dimObj.status?.includes('Offline') || dimObj.status?.includes('Inert') || dimObj.status?.includes('Unresolvable');
+            const statusColor = isOk ? '#059669' : isNeutral ? '#64748b' : '#e11d48';
+            const displayStatus = dimObj.status || (isUnavailable ? 'Offline / N/A' : dim.okStatus);
+            const displaySummary = dimObj.summary || (isUnavailable ? 'Host did not respond on port 443; no active certificate could be analyzed.' : dim.defSummary);
+            const displayDetails = dimObj.details || (isUnavailable ? 'Port 443 unreachable' : 'Telemetry recorded');
+
             return (
               <div key={dim.key} style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Dimension {dim.num}</span>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: isOk ? '#059669' : '#e11d48' }}>
-                      {dimObj.status || dim.okStatus}
+                    <span style={{ fontSize: 12, fontWeight: 800, color: statusColor, fontFamily: 'IBM Plex Mono' }}>
+                      {displayStatus}
                     </span>
                   </div>
                   <h4 style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>{dim.title}</h4>
                   <p style={{ fontSize: 12.5, color: '#475569', marginTop: 4, lineHeight: 1.45 }}>
-                    {dimObj.summary || dim.defSummary}
+                    {displaySummary}
                   </p>
                 </div>
-                <div style={{ fontSize: 11.5, color: '#0284c7', marginTop: 12, fontFamily: 'IBM Plex Mono' }}>
-                  {dimObj.details}
+                <div style={{ fontSize: 11.5, color: isNeutral ? '#64748b' : '#0284c7', marginTop: 12, fontFamily: 'IBM Plex Mono' }}>
+                  {displayDetails}
                 </div>
               </div>
             );

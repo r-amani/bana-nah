@@ -65,6 +65,46 @@ export default function ScanReport({ scan, onNavigate }) {
 
   const filteredFindings = findings.filter(f => severityFilter === 'all' || f.severity === severityFilter);
 
+  const tlsMod = scan.module_results?.find(m => m.module === 'tls_validation');
+  const tlsData = tlsMod?.data || {};
+  const isTlsUnavailable = tlsData.status === 'unavailable' || tlsData.status === 'failed';
+  const isHighRisk = riskScore >= 50;
+  const isSuspicious = riskScore >= 25 && riskScore < 50;
+
+  let reportVerdict = {
+    title: 'Low Risk: No Active Phishing Signals Detected',
+    badge: 'Safe / Low Threat',
+    borderColor: '#059669', bg: '#f6fdf9', tagColor: '#059669', badgeBg: '#ecfdf5', badgeColor: '#059669', badgeBorder: '#a7f3d0',
+    summary: `Target ${scan.hostname || 'domain'} does not exhibit active phishing signals, deceptive homoglyphs, or malicious campaign clusters.`,
+    takeaway: 'Safe to browse under standard awareness. Always verify who you are dealing with before submitting personal or financial credentials.',
+  };
+
+  if (isHighRisk) {
+    reportVerdict = {
+      title: 'High Risk: Probable Phishing or Impersonation Lure',
+      badge: 'High Threat',
+      borderColor: '#e11d48', bg: '#fff5f5', tagColor: '#e11d48', badgeBg: '#fff1f2', badgeColor: '#e11d48', badgeBorder: '#fecdd3',
+      summary: `Warning: This website exhibits strong deceptive signals (risk score: ${riskScore.toFixed(1)}/100). It may be designed to mimic legitimate brands to capture sensitive login credentials or payment details.`,
+      takeaway: 'Do NOT enter passwords, phone numbers, or credit card information on this site. Close the page and report the link.',
+    };
+  } else if (isSuspicious) {
+    reportVerdict = {
+      title: 'Medium Risk: Suspicious Anomalies Detected',
+      badge: 'Suspicious / Caution',
+      borderColor: '#d97706', bg: '#fffdf5', tagColor: '#d97706', badgeBg: '#fffbeb', badgeColor: '#d97706', badgeBorder: '#fde68a',
+      summary: `This target exhibits moderate risk factors (risk score: ${riskScore.toFixed(1)}/100), such as unusual URL patterns, unencrypted forms, or brand keyword mentions without confirmed ownership.`,
+      takeaway: 'Exercise caution. Double-check the URL and authenticate directly via official bookmarks before entering any login details.',
+    };
+  } else if (isTlsUnavailable) {
+    reportVerdict = {
+      title: 'Target Host Is Currently Offline or Inactive',
+      badge: 'Offline / Inactive Link',
+      borderColor: '#94a3b8', bg: '#f8fafc', tagColor: '#64748b', badgeBg: '#f1f5f9', badgeColor: '#475569', badgeBorder: '#cbd5e1',
+      summary: `The domain ${scan.hostname || 'target'} could not be reached over HTTPS on port 443 (${tlsData.error || 'Server did not respond or failed DNS'}). It does not pose an active immediate threat because the website cannot be opened by visitors.`,
+      takeaway: 'No immediate action required. If you received this link in a suspicious email or text message, you can safely ignore it as the link is dead.',
+    };
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1140, margin: '0 auto' }}>
       {/* Top Header Card */}
@@ -140,6 +180,35 @@ export default function ScanReport({ scan, onNavigate }) {
               <span style={{ color: '#475569' }}>DOM & Headers:</span><strong style={{ color: '#0f172a', fontFamily: 'IBM Plex Mono' }}>{breakdown.content_and_headers} pts</strong>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Layman Executive Conclusion Card */}
+      <div style={{ background: reportVerdict.bg, border: '1.5px solid var(--border-subtle)', borderLeft: `6px solid ${reportVerdict.borderColor}`, borderRadius: 20, padding: '24px 28px', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>💡</span>
+              <span style={{ fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: reportVerdict.tagColor }}>
+                Plain-English Investigation Conclusion
+              </span>
+            </div>
+            <h3 style={{ fontSize: 19, fontWeight: 800, color: '#0f172a', marginTop: 6 }}>
+              {reportVerdict.title}
+            </h3>
+          </div>
+          <span style={{ padding: '4px 14px', borderRadius: 999, fontSize: 12, fontWeight: 800, background: reportVerdict.badgeBg, color: reportVerdict.badgeColor, border: `1px solid ${reportVerdict.badgeBorder}`, fontFamily: 'IBM Plex Mono' }}>
+            {reportVerdict.badge}
+          </span>
+        </div>
+
+        <p style={{ fontSize: 13.5, color: '#334155', marginTop: 12, lineHeight: 1.6, fontWeight: 500 }}>
+          {reportVerdict.summary}
+        </p>
+
+        <div style={{ marginTop: 16, background: '#ffffff', padding: '14px 18px', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em' }}>🛡️ Recommended Action for Users</span>
+          <p style={{ fontSize: 13, color: reportVerdict.tagColor, marginTop: 4, lineHeight: 1.5, margin: '4px 0 0', fontWeight: 600 }}>{reportVerdict.takeaway}</p>
         </div>
       </div>
 

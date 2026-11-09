@@ -57,6 +57,48 @@ def _dim(dim_id: str, name: str, status: str, explanation: str, severity: str = 
     return {"id": dim_id, "name": name, "status": status, "explanation": explanation, "severity": severity, "evidence": evidence or {}}
 
 
+def _build_unavailable_payload(hostname: str, port: int, error_str: str, status: str = "unavailable") -> dict:
+    is_dns_failure = any(k in error_str.lower() for k in ("known", "not known", "gaierror", "nodename"))
+    error_summary = "DNS resolution failed (domain has no active IP routing or does not exist)." if is_dns_failure else f"Connection to port 443 was refused or timed out ({error_str})."
+
+    findings_list = [
+        {
+            "title": "TLS Handshake Incomplete / Host Offline",
+            "severity": "info",
+            "evidence": f"Target: {hostname}:{port} — {error_str}",
+            "interpretation": error_summary,
+        }
+    ]
+    summary = {
+        "certificate_health": {
+            "status": "Offline / N/A",
+            "title": "Certificate Health",
+            "summary": "Port 443 was unreachable; no certificate was presented to validate.",
+            "details": f"Error: {error_str}",
+        },
+        "domain_identity": {
+            "status": "Unresolvable" if is_dns_failure else "Unreachable",
+            "title": "Domain Identity",
+            "summary": "Domain failed to route to an operational HTTPS server.",
+            "details": hostname,
+        },
+        "website_trust": {
+            "status": "Inactive / Inert",
+            "title": "Website Trust",
+            "summary": "Host is currently inactive; no live phishing forms can be loaded by users.",
+            "details": "Server offline / dead link",
+        },
+    }
+    return {
+        "status": status, "error": error_str, "chain_valid": False, "is_expired": None,
+        "is_self_signed": None, "hostname_matches": False, "certificate_type": None,
+        "tls_version": None, "tls_protocol": None, "cipher": None, "cipher_suite": None,
+        "is_unverified_fallback": False,
+        "investigation_findings": findings_list,
+        "investigation_summary": summary,
+    }
+
+
 class TlsValidationModule(ModuleInterface):
     name = "tls_validation"
     description = "TLS certificate extraction, expiration, SAN validation, and cryptographic analysis"
@@ -116,12 +158,7 @@ class TlsValidationModule(ModuleInterface):
                 Severity.INFO, 0.95, {"hostname": hostname, "port": port, "error": str(e)},
                 "Ensure an active, valid TLS certificate is deployed on port 443."
             )
-            return {
-                "status": "unavailable", "error": str(e), "chain_valid": False, "is_expired": None,
-                "is_self_signed": None, "hostname_matches": False, "certificate_type": None,
-                "tls_version": None, "tls_protocol": None, "cipher": None, "cipher_suite": None,
-                "is_unverified_fallback": False
-            }
+            return _build_unavailable_payload(hostname, port, str(e), status="unavailable")
         except Exception as e:
             logger.warning("Unexpected TLS error for %s:%d: %s", hostname, port, e)
             _add_finding(
@@ -130,12 +167,7 @@ class TlsValidationModule(ModuleInterface):
                 Severity.INFO, 0.95, {"hostname": hostname, "port": port, "error": str(e)},
                 "Ensure an active, valid TLS certificate is deployed on port 443."
             )
-            return {
-                "status": "unavailable", "error": str(e), "chain_valid": False, "is_expired": None,
-                "is_self_signed": None, "hostname_matches": False, "certificate_type": None,
-                "tls_version": None, "tls_protocol": None, "cipher": None, "cipher_suite": None,
-                "is_unverified_fallback": False
-            }
+            return _build_unavailable_payload(hostname, port, str(e), status="unavailable")
 
         if not raw_der:
             err_msg = chain_error or "No certificate received from host"
@@ -145,12 +177,7 @@ class TlsValidationModule(ModuleInterface):
                 Severity.INFO, 0.95, {"hostname": hostname, "port": port, "error": err_msg},
                 "Ensure an active, valid TLS certificate is deployed on port 443."
             )
-            return {
-                "status": "failed", "error": err_msg, "chain_valid": False, "is_expired": None,
-                "is_self_signed": None, "hostname_matches": False, "certificate_type": None,
-                "tls_version": None, "tls_protocol": None, "cipher": None, "cipher_suite": None,
-                "is_unverified_fallback": False
-            }
+            return _build_unavailable_payload(hostname, port, err_msg, status="failed")
 
         try:
             cert = x509.load_der_x509_certificate(raw_der)
