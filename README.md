@@ -74,7 +74,7 @@ All stages run asynchronously inside the FastAPI backend and results are stored 
 | Resource | Link |
 |---|---|
 | **GitHub Repository** | https://github.com/rittikasarkar16/bana-nah |
-| **Live Application** | <!-- TODO: Add deployed URL --> `[Add Live Demo URL]` |
+| **Live Application** | https://bana-nah.vercel.app/ |
 | **Demo Video (≤3 min)** | <!-- TODO: Upload and link video --> `[Add Demo Video URL]` |
 | **Swagger API Docs** | `http://127.0.0.1:8000/docs` *(local dev)* |
 | **Health Check** | `http://127.0.0.1:8000/health` *(local dev)* |
